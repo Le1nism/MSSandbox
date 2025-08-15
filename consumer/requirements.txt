@@ -1,0 +1,16 @@
+# Basic dependencies for consumer service
+# Add more dependencies as needed for your application logic
+
+# Web framework (for when you add actual API endpoints)
+# flask==2.3.3
+
+# HTTP client (for making requests to producer service)
+# requests==2.31.0
+
+# Environment variables
+# python-dotenv==1.0.0
+
+# For now, just keep it empty or add basic packages
+# This file will be populated when you add actual application logic
+
+# Empty file - no dependencies yet

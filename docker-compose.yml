@@ -1,0 +1,31 @@
+version: '3.8'
+
+services:
+  producer:
+    build: ./producer
+    container_name: producer-service
+    ports:
+      - "8001:8001"
+    networks:
+      - microservices-network
+    environment:
+      - SERVICE_PORT=8001
+    restart: unless-stopped
+
+  consumer:
+    build: ./consumer
+    container_name: consumer-service
+    ports:
+      - "8002:8002"
+    networks:
+      - microservices-network
+    environment:
+      - SERVICE_PORT=8002
+      - PRODUCER_URL=http://producer:8001
+    depends_on:
+      - producer
+    restart: unless-stopped
+
+networks:
+  microservices-network:
+    driver: bridge
