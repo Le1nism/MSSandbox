@@ -1,6 +1,6 @@
-# Microservices Learning Project
+# Microservices Analysis Sandbox
 
-A simple Docker-based microservices project for learning microservices architecture.
+A simple Docker-based microservices project for scalability and performance analysis.
 
 ## Project Structure
 
@@ -72,4 +72,3 @@ Both services are on the same Docker network (`microservices-network`) and can c
 
 - Producer service: `http://localhost:8001`
 - Consumer service: `http://localhost:8002`
-
