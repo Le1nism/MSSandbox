@@ -1,19 +1,13 @@
-# Consumer Service
-# This is a placeholder file for the consumer service
-
+#!/usr/bin/env python3
 import os
 import time
 
-def main():
-    """Main function for the consumer service"""
-    print("Consumer service placeholder")
-    print(f"Service port: {os.getenv('SERVICE_PORT', '8002')}")
-    print(f"Producer URL: {os.getenv('PRODUCER_URL', 'http://producer:8001')}")
-    
-    # Keep the service running
-    while True:
-        time.sleep(10)
-        print("Consumer service is running...")
+print("CONSUMER SERVICE STARTED")
+print(f"PORT: {os.getenv('SERVICE_PORT', '8002')}")
+print(f"PRODUCER_URL: {os.getenv('PRODUCER_URL', 'http://producer:8001')}")
 
-if __name__ == "__main__":
-    main()
+i = 1
+while True:
+    print(f"CONSUMER LOG #{i}: Service is alive")
+    time.sleep(5)
+    i += 1

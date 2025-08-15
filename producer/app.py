@@ -1,19 +1,12 @@
-# Producer Service
-# This is a placeholder file for the producer service
-# Replace this with your actual application logic
-
+#!/usr/bin/env python3
 import os
 import time
 
-def main():
-    """Main function for the producer service"""
-    print("Producer service placeholder")
-    print(f"Service port: {os.getenv('SERVICE_PORT', '8001')}")
-    
-    # Keep the service running
-    while True:
-        time.sleep(10)
-        print("Producer service is running...")
+print("PRODUCER SERVICE STARTED")
+print(f"PORT: {os.getenv('SERVICE_PORT', '8001')}")
 
-if __name__ == "__main__":
-    main()
+i = 1
+while True:
+    print(f"PRODUCER LOG #{i}: Service is alive")
+    time.sleep(5)
+    i += 1

@@ -14,5 +14,5 @@ COPY . .
 # Expose port
 EXPOSE 8001
 
-# Placeholder command - will be replaced with actual application logic
-CMD ["python", "-c", "import time; print('Producer service starting...'); time.sleep(3600)"]
+# Run with unbuffered output to ensure logs are visible
+CMD ["python", "-u", "app.py"]
