@@ -26,6 +26,22 @@ services:
       - producer
     restart: unless-stopped
 
+  webui:
+    build: ./webui
+    container_name: webui-service
+    ports:
+      - "8000:8000"
+    networks:
+      - microservices-network
+    environment:
+      - SERVICE_PORT=8000
+      - PRODUCER_URL=http://producer:8001
+      - CONSUMER_URL=http://consumer:8002
+    depends_on:
+      - producer
+      - consumer
+    restart: unless-stopped
+
 networks:
   microservices-network:
     driver: bridge

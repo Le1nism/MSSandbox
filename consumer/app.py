@@ -11,6 +11,9 @@ app = Flask(__name__)
 SERVICE_PORT = int(os.getenv('SERVICE_PORT', 8002))
 PRODUCER_URL = os.getenv('PRODUCER_URL', 'http://producer:8001')
 
+# Store the last received data
+last_received_data = None
+
 def process_sensor_data(data):
     """Process sensor data and add analysis"""
     processed_data = data.copy()
@@ -62,11 +65,16 @@ def home():
 @app.route('/process-data', methods=['POST'])
 def process_data():
     """Process incoming sensor data"""
+    global last_received_data
+    
     try:
         data = request.get_json()
         
         if not data:
             return jsonify({'error': 'No data provided'}), 400
+        
+        # Store the received data
+        last_received_data = data.copy()
         
         # Process the data
         processed_data = process_sensor_data(data)
@@ -87,29 +95,40 @@ def process_data():
 
 @app.route('/get-processed-data')
 def get_processed_data():
-    """Get data from producer and process it"""
+    """Get data from producer and process it (or use last received data if available)"""
+    global last_received_data
+    
     try:
-        # Get data from producer
-        response = requests.get(f"{PRODUCER_URL}/generate-data", timeout=5)
-        
-        if response.status_code == 200:
-            producer_data = response.json()
-            sensor_data = producer_data.get('data', {})
-            
-            # Process the data
-            processed_data = process_sensor_data(sensor_data)
-            
-            return jsonify({
-                'message': 'Data retrieved and processed successfully',
-                'producer_data': sensor_data,
-                'processed_data': processed_data,
-                'timestamp': datetime.now().isoformat()
-            })
+        # If we have previously received data, use that instead of fetching new data
+        if last_received_data is not None:
+            print(f"Using previously received data with sensor ID: {last_received_data.get('sensor_id', 'UNKNOWN')}")
+            sensor_data = last_received_data
         else:
-            return jsonify({
-                'error': 'Failed to get data from producer'
-            }), 500
+            # Get fresh data from producer
+            print("No previous data available, fetching new data from producer")
+            response = requests.get(f"{PRODUCER_URL}/generate-data", timeout=5)
             
+            if response.status_code == 200:
+                producer_data = response.json()
+                sensor_data = producer_data.get('data', {})
+                # Store the new data
+                last_received_data = sensor_data.copy()
+            else:
+                return jsonify({
+                    'error': 'Failed to get data from producer'
+                }), 500
+        
+        # Process the data
+        processed_data = process_sensor_data(sensor_data)
+        
+        return jsonify({
+            'message': 'Data retrieved and processed successfully',
+            'producer_data': sensor_data,
+            'processed_data': processed_data,
+            'timestamp': datetime.now().isoformat(),
+            'data_source': 'cached' if last_received_data is not None else 'fresh'
+        })
+        
     except requests.exceptions.RequestException as e:
         return jsonify({
             'error': f'Error connecting to producer: {str(e)}'
@@ -122,7 +141,8 @@ def status():
         'service': 'Consumer Service',
         'status': 'healthy',
         'timestamp': datetime.now().isoformat(),
-        'producer_url': PRODUCER_URL
+        'producer_url': PRODUCER_URL,
+        'last_data_sensor_id': last_received_data.get('sensor_id') if last_received_data else None
     })
 
 if __name__ == '__main__':

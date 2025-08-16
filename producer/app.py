@@ -13,6 +13,9 @@ app = Flask(__name__)
 SERVICE_PORT = int(os.getenv('SERVICE_PORT', 8001))
 CONSUMER_URL = os.getenv('CONSUMER_URL', 'http://consumer:8002')
 
+# Store the last generated data
+last_generated_data = None
+
 def generate_sensor_data():
     """Generate random sensor data"""
     return {
@@ -54,28 +57,37 @@ def home():
 @app.route('/generate-data')
 def generate_data():
     """Generate and return sensor data"""
-    data = generate_sensor_data()
+    global last_generated_data
+    last_generated_data = generate_sensor_data()
     return jsonify({
         'message': 'Data generated successfully',
-        'data': data
+        'data': last_generated_data
     })
 
 @app.route('/send-data')
 def send_data():
-    """Generate data and send it to consumer"""
-    data = generate_sensor_data()
-    result = send_data_to_consumer(data)
+    """Send data to consumer (uses last generated data or generates new if none exists)"""
+    global last_generated_data
+    
+    # If no data was previously generated, generate new data
+    if last_generated_data is None:
+        last_generated_data = generate_sensor_data()
+        print("No previous data found, generating new data for sending")
+    else:
+        print(f"Using previously generated data with sensor ID: {last_generated_data['sensor_id']}")
+    
+    result = send_data_to_consumer(last_generated_data)
     
     if result:
         return jsonify({
             'message': 'Data sent to consumer successfully',
-            'sent_data': data,
+            'sent_data': last_generated_data,
             'consumer_response': result
         })
     else:
         return jsonify({
             'message': 'Failed to send data to consumer',
-            'sent_data': data,
+            'sent_data': last_generated_data,
             'error': 'Consumer service unavailable'
         }), 500
 
@@ -86,7 +98,8 @@ def status():
         'service': 'Producer Service',
         'status': 'healthy',
         'timestamp': datetime.now().isoformat(),
-        'consumer_url': CONSUMER_URL
+        'consumer_url': CONSUMER_URL,
+        'last_data_sensor_id': last_generated_data['sensor_id'] if last_generated_data else None
     })
 
 if __name__ == '__main__':

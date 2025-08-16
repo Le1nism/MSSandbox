@@ -1,6 +1,6 @@
 # Microservices Learning Project
 
-A simple Docker-based microservices project for learning microservices architecture with real data exchange.
+A simple Docker-based microservices project for learning microservices architecture with real data exchange and a modern web interface.
 
 ## Project Structure
 
@@ -15,6 +15,12 @@ MSSandbox/
 │   ├── Dockerfile
 │   ├── requirements.txt
 │   └── app.py
+├── webui/
+│   ├── Dockerfile
+│   ├── requirements.txt
+│   ├── app.py
+│   └── templates/
+│       └── index.html
 └── README.md
 ```
 
@@ -37,6 +43,16 @@ MSSandbox/
     - `/process-data` - Process incoming data (POST)
     - `/get-processed-data` - Get data from producer and process it
     - `/status` - Service status
+
+- **Web UI Service**: Modern web interface for interacting with microservices
+  - Port: 8000
+  - Container name: webui-service
+  - Features:
+    - Real-time service health monitoring
+    - Interactive data flow visualization
+    - One-click data generation and processing
+    - JSON result display
+    - Manual data input capabilities
 
 ## Getting Started
 
@@ -70,11 +86,33 @@ MSSandbox/
    # Specific service
    docker-compose logs producer
    docker-compose logs consumer
+   docker-compose logs webui
    ```
 
-### Testing the Services
+### Using the Web Interface
 
-Once the services are running, you can test them:
+Once all services are running, open your browser and navigate to:
+
+**🌐 Web Dashboard: http://localhost:8000**
+
+The web interface provides:
+
+- **Service Health Monitoring**: Real-time status of Producer and Consumer services
+- **Interactive Controls**: Buttons to trigger different microservices operations
+- **Data Flow Visualization**: Clear diagram showing how data flows between services
+- **Results Display**: Formatted JSON output showing the data exchange
+- **Manual Data Processing**: Ability to send custom data for processing
+
+### Web UI Features
+
+1. **Generate Data**: Create new sensor data from the Producer service
+2. **Send to Consumer**: Producer automatically sends data to Consumer for processing
+3. **Get Processed Data**: Consumer fetches data from Producer and processes it
+4. **Manual Processing**: Send custom data directly to Consumer for processing
+
+### Testing the Services (Command Line)
+
+You can also test the services directly via command line:
 
 #### 1. Check Service Status
 ```bash
@@ -83,6 +121,9 @@ curl http://localhost:8001/status
 
 # Consumer service
 curl http://localhost:8002/status
+
+# Web UI service
+curl http://localhost:8000/api/status
 ```
 
 #### 2. Generate Sensor Data
@@ -113,12 +154,14 @@ curl -X POST http://localhost:8002/process-data \
 
 ### Network Communication
 
-Both services are on the same Docker network (`microservices-network`) and can communicate using service names:
+All services are on the same Docker network (`microservices-network`) and can communicate using service names:
 - Producer service is accessible at `http://producer:8001` from within the Docker network
 - Consumer service is accessible at `http://consumer:8002` from within the Docker network
+- Web UI service is accessible at `http://webui:8000` from within the Docker network
 
 ### Local Access
 
+- **Web Dashboard**: `http://localhost:8000`
 - Producer service: `http://localhost:8001`
 - Consumer service: `http://localhost:8002`
 
@@ -165,6 +208,7 @@ Both services are on the same Docker network (`microservices-network`) and can c
 ## Troubleshooting
 
 - If containers fail to start, check the logs: `docker-compose logs`
-- Ensure ports 8001 and 8002 are not already in use on your system
+- Ensure ports 8000, 8001, and 8002 are not already in use on your system
 - Make sure Docker and Docker Compose are properly installed and running
-- Check that both services can communicate by testing the endpoints
+- Check that all services can communicate by testing the endpoints
+- If the web UI doesn't load, check that all services are healthy in the status bar
