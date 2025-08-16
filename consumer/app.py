@@ -14,6 +14,10 @@ PRODUCER_URL = os.getenv('PRODUCER_URL', 'http://producer:8001')
 # Store the last received data
 last_received_data = None
 
+# Store all processed data for viewing
+processed_data_history = []
+max_history_size = 100  # Keep last 100 entries
+
 def process_sensor_data(data):
     """Process sensor data and add analysis"""
     processed_data = data.copy()
@@ -48,6 +52,19 @@ def process_sensor_data(data):
     
     return processed_data
 
+def add_to_history(processed_data):
+    """Add processed data to history"""
+    global processed_data_history
+    
+    # Add to history
+    processed_data_history.append(processed_data)
+    
+    # Keep only the last max_history_size entries
+    if len(processed_data_history) > max_history_size:
+        processed_data_history = processed_data_history[-max_history_size:]
+    
+    print(f"📊 Added to history: {processed_data.get('sensor_id', 'UNKNOWN')} - Total entries: {len(processed_data_history)}")
+
 @app.route('/')
 def home():
     """Home endpoint"""
@@ -58,6 +75,8 @@ def home():
         'endpoints': {
             'process_data': '/process-data',
             'get_processed_data': '/get-processed-data',
+            'view_all_data': '/view-all-data',
+            'clear_history': '/clear-history',
             'status': '/status'
         }
     })
@@ -78,6 +97,9 @@ def process_data():
         
         # Process the data
         processed_data = process_sensor_data(data)
+        
+        # Add to history
+        add_to_history(processed_data)
         
         print(f"Processed data from sensor: {data.get('sensor_id', 'UNKNOWN')}")
         
@@ -121,6 +143,9 @@ def get_processed_data():
         # Process the data
         processed_data = process_sensor_data(sensor_data)
         
+        # Add to history
+        add_to_history(processed_data)
+        
         return jsonify({
             'message': 'Data retrieved and processed successfully',
             'producer_data': sensor_data,
@@ -134,6 +159,27 @@ def get_processed_data():
             'error': f'Error connecting to producer: {str(e)}'
         }), 500
 
+@app.route('/view-all-data')
+def view_all_data():
+    """View all processed data in a formatted way"""
+    return jsonify({
+        'message': f'Retrieved {len(processed_data_history)} processed data entries',
+        'total_entries': len(processed_data_history),
+        'data': processed_data_history,
+        'timestamp': datetime.now().isoformat()
+    })
+
+@app.route('/clear-history')
+def clear_history():
+    """Clear the data history"""
+    global processed_data_history
+    count = len(processed_data_history)
+    processed_data_history = []
+    return jsonify({
+        'message': f'Cleared {count} entries from history',
+        'total_entries': 0
+    })
+
 @app.route('/status')
 def status():
     """Service status"""
@@ -142,7 +188,9 @@ def status():
         'status': 'healthy',
         'timestamp': datetime.now().isoformat(),
         'producer_url': PRODUCER_URL,
-        'last_data_sensor_id': last_received_data.get('sensor_id') if last_received_data else None
+        'last_data_sensor_id': last_received_data.get('sensor_id') if last_received_data else None,
+        'history_entries': len(processed_data_history),
+        'max_history_size': max_history_size
     })
 
 if __name__ == '__main__':

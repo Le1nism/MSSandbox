@@ -19,7 +19,7 @@
         }
 
         .container {
-            max-width: 1200px;
+            max-width: 1400px;
             margin: 0 auto;
             background: white;
             border-radius: 15px;
@@ -75,6 +75,76 @@
             padding: 30px;
         }
 
+        .automation-controls {
+            background: #e8f5e8;
+            border: 1px solid #c3e6cb;
+            border-radius: 10px;
+            padding: 20px;
+            margin-bottom: 30px;
+            text-align: center;
+        }
+
+        .automation-controls h3 {
+            color: #155724;
+            margin-bottom: 15px;
+        }
+
+        .automation-buttons {
+            display: flex;
+            gap: 15px;
+            justify-content: center;
+            margin-bottom: 15px;
+        }
+
+        .btn {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 25px;
+            cursor: pointer;
+            font-size: 1em;
+            transition: all 0.3s ease;
+            min-width: 120px;
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+        }
+
+        .btn:disabled {
+            background: #6c757d;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .btn-start {
+            background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
+        }
+
+        .btn-stop {
+            background: linear-gradient(135deg, #dc3545 0%, #fd7e14 100%);
+        }
+
+        .btn-view {
+            background: linear-gradient(135deg, #17a2b8 0%, #6f42c1 100%);
+        }
+
+        .automation-status {
+            font-size: 1.1em;
+            font-weight: bold;
+            margin-top: 10px;
+        }
+
+        .automation-status.running {
+            color: #28a745;
+        }
+
+        .automation-status.stopped {
+            color: #dc3545;
+        }
+
         .flow-diagram {
             display: flex;
             justify-content: space-between;
@@ -127,49 +197,63 @@
             font-size: 1.2em;
         }
 
-        .btn {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-            border: none;
-            padding: 12px 24px;
-            border-radius: 25px;
-            cursor: pointer;
-            font-size: 1em;
-            transition: all 0.3s ease;
-            width: 100%;
-            margin-bottom: 10px;
+        .data-display {
+            background: white;
+            border: 1px solid #e9ecef;
+            border-radius: 10px;
+            padding: 20px;
+            margin-top: 20px;
+            max-height: 600px;
+            overflow-y: auto;
         }
 
-        .btn:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
-        }
-
-        .btn:disabled {
-            background: #6c757d;
-            cursor: not-allowed;
-            transform: none;
-        }
-
-        .current-data {
-            background: #e8f5e8;
-            border: 1px solid #c3e6cb;
-            border-radius: 8px;
-            padding: 15px;
-            margin-bottom: 20px;
-            text-align: center;
-        }
-
-        .current-data h4 {
-            color: #155724;
-            margin-bottom: 8px;
-        }
-
-        .current-data p {
+        .data-display h3 {
             color: #495057;
-            font-family: 'Courier New', monospace;
-            font-size: 0.9em;
+            margin-bottom: 15px;
         }
+
+        .data-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 15px;
+        }
+
+        .data-table th,
+        .data-table td {
+            border: 1px solid #dee2e6;
+            padding: 12px;
+            text-align: left;
+        }
+
+        .data-table th {
+            background: #f8f9fa;
+            font-weight: bold;
+            color: #495057;
+        }
+
+        .data-table tr:nth-child(even) {
+            background: #f8f9fa;
+        }
+
+        .data-table tr:hover {
+            background: #e9ecef;
+        }
+
+        .status-badge {
+            padding: 4px 8px;
+            border-radius: 12px;
+            font-size: 0.8em;
+            font-weight: bold;
+        }
+
+        .status-cold { background: #d1ecf1; color: #0c5460; }
+        .status-comfortable { background: #d4edda; color: #155724; }
+        .status-warm { background: #f8d7da; color: #721c24; }
+        .status-dry { background: #fff3cd; color: #856404; }
+        .status-normal { background: #d4edda; color: #155724; }
+        .status-humid { background: #d1ecf1; color: #0c5460; }
+        .status-stable { background: #d4edda; color: #155724; }
+        .status-variable { background: #f8d7da; color: #721c24; }
 
         .results {
             background: white;
@@ -255,13 +339,17 @@
             margin-right: 15px;
             font-weight: bold;
         }
+
+        .hidden {
+            display: none;
+        }
     </style>
 </head>
 <body>
     <div class="container">
         <div class="header">
             <h1>🚀 Microservices Dashboard</h1>
-            <p>Monitor and interact with your Producer and Consumer services</p>
+            <p>Automated data generation and processing system</p>
         </div>
 
         <div class="status-bar">
@@ -276,75 +364,76 @@
         </div>
 
         <div class="main-content">
-            <div class="current-data" id="current-data" style="display: none;">
-                <h4>📊 Current Generated Data</h4>
-                <p id="current-sensor-id">No data generated yet</p>
+            <div class="automation-controls">
+                <h3>🤖 Automation Controls</h3>
+                <div class="automation-buttons">
+                    <button class="btn btn-start" onclick="startAutomation()" id="start-btn">▶️ START</button>
+                    <button class="btn btn-stop" onclick="stopAutomation()" id="stop-btn">⏹️ STOP</button>
+                    <button class="btn btn-view" onclick="viewAllData()">📊 VIEW DATA</button>
+                </div>
+                <div class="automation-status" id="automation-status">Checking automation status...</div>
             </div>
 
             <div class="flow-diagram">
                 <div class="service-box">
                     <h3>📡 Producer</h3>
-                    <p>Generates sensor data</p>
+                    <p>Automatically generates and sends sensor data</p>
                 </div>
                 <div class="arrow">→</div>
                 <div class="service-box">
                     <h3>⚙️ Consumer</h3>
-                    <p>Processes and analyzes data</p>
+                    <p>Processes and stores data with analysis</p>
                 </div>
             </div>
 
             <div class="controls">
                 <div class="control-card">
-                    <h3>Generate Data</h3>
-                    <p>Create new sensor data from Producer</p>
+                    <h3>Manual Controls</h3>
+                    <p>For testing individual operations</p>
                     <button class="btn" onclick="generateData()">Generate Data</button>
+                    <button class="btn" onclick="sendData()">Send Data</button>
+                    <button class="btn" onclick="getProcessedData()">Get Processed</button>
                 </div>
 
                 <div class="control-card">
-                    <h3>Send to Consumer</h3>
-                    <p>Producer sends data to Consumer for processing</p>
-                    <button class="btn" onclick="sendData()" id="send-btn">Send Data</button>
-                </div>
-
-                <div class="control-card">
-                    <h3>Get Processed Data</h3>
-                    <p>Consumer fetches and processes data from Producer</p>
-                    <button class="btn" onclick="getProcessedData()">Get Processed Data</button>
-                </div>
-
-                <div class="control-card">
-                    <h3>Manual Processing</h3>
-                    <p>Send custom data to Consumer for processing</p>
-                    <button class="btn" onclick="showManualInput()">Process Custom Data</button>
+                    <h3>Data Management</h3>
+                    <p>Manage stored data</p>
+                    <button class="btn" onclick="clearHistory()">Clear History</button>
+                    <button class="btn" onclick="showManualInput()">Manual Input</button>
                 </div>
             </div>
 
             <div class="data-flow">
-                <h3>📊 Data Flow Process</h3>
+                <h3>📊 Automated Data Flow</h3>
                 <div class="flow-step">
                     <div class="step-number">1</div>
                     <div>
-                        <strong>Producer generates sensor data:</strong> Temperature, humidity, pressure, and sensor ID
+                        <strong>START Automation:</strong> Producer automatically generates sensor data every 5 seconds
                     </div>
                 </div>
                 <div class="flow-step">
                     <div class="step-number">2</div>
                     <div>
-                        <strong>Data is sent to Consumer:</strong> Via HTTP POST request (uses same data)
+                        <strong>Data Processing:</strong> Consumer receives, processes, and stores data with analysis
                     </div>
                 </div>
                 <div class="flow-step">
                     <div class="step-number">3</div>
                     <div>
-                        <strong>Consumer processes data:</strong> Adds analysis, status indicators, and quality scores
+                        <strong>VIEW Results:</strong> View all processed data in a formatted, human-readable table
                     </div>
                 </div>
                 <div class="flow-step">
                     <div class="step-number">4</div>
                     <div>
-                        <strong>Processed data is returned:</strong> Enhanced data with insights and analysis
+                        <strong>STOP Automation:</strong> Halt the automated data generation process
                     </div>
                 </div>
+            </div>
+
+            <div class="data-display hidden" id="data-display">
+                <h3>📊 Processed Data History</h3>
+                <div id="data-table-container"></div>
             </div>
 
             <div class="results" id="results" style="display: none;">
@@ -355,13 +444,15 @@
     </div>
 
     <script>
-        let currentSensorId = null;
+        let automationRunning = false;
 
         // Check service status on page load
         document.addEventListener('DOMContentLoaded', function() {
             checkStatus();
+            checkAutomationStatus();
             // Check status every 10 seconds
             setInterval(checkStatus, 10000);
+            setInterval(checkAutomationStatus, 5000);
         });
 
         async function checkStatus() {
@@ -373,6 +464,18 @@
                 updateServiceStatus('consumer', data.consumer.healthy);
             } catch (error) {
                 console.error('Error checking status:', error);
+            }
+        }
+
+        async function checkAutomationStatus() {
+            try {
+                const response = await fetch('/api/automation-status');
+                const data = await response.json();
+                
+                automationRunning = data.automation_running;
+                updateAutomationStatus();
+            } catch (error) {
+                console.error('Error checking automation status:', error);
             }
         }
 
@@ -389,16 +492,131 @@
             }
         }
 
+        function updateAutomationStatus() {
+            const statusElement = document.getElementById('automation-status');
+            const startBtn = document.getElementById('start-btn');
+            const stopBtn = document.getElementById('stop-btn');
+            
+            if (automationRunning) {
+                statusElement.textContent = '🟢 Automation is RUNNING - Generating data every 5 seconds';
+                statusElement.className = 'automation-status running';
+                startBtn.disabled = true;
+                stopBtn.disabled = false;
+            } else {
+                statusElement.textContent = '🔴 Automation is STOPPED';
+                statusElement.className = 'automation-status stopped';
+                startBtn.disabled = false;
+                stopBtn.disabled = true;
+            }
+        }
+
+        async function startAutomation() {
+            showLoading('Starting automation...');
+            try {
+                const response = await fetch('/api/start-automation');
+                const data = await response.json();
+                showResult(data, 'Automation Started Successfully');
+                checkAutomationStatus();
+            } catch (error) {
+                showError('Failed to start automation: ' + error.message);
+            }
+        }
+
+        async function stopAutomation() {
+            showLoading('Stopping automation...');
+            try {
+                const response = await fetch('/api/stop-automation');
+                const data = await response.json();
+                showResult(data, 'Automation Stopped Successfully');
+                checkAutomationStatus();
+            } catch (error) {
+                showError('Failed to stop automation: ' + error.message);
+            }
+        }
+
+        async function viewAllData() {
+            showLoading('Loading processed data...');
+            try {
+                const response = await fetch('/api/view-all-data');
+                const data = await response.json();
+                
+                if (data.data && data.data.length > 0) {
+                    displayDataTable(data.data);
+                } else {
+                    showResult(data, 'No processed data available');
+                }
+            } catch (error) {
+                showError('Failed to load data: ' + error.message);
+            }
+        }
+
+        function displayDataTable(data) {
+            const dataDisplay = document.getElementById('data-display');
+            const container = document.getElementById('data-table-container');
+            
+            let tableHTML = `
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th>Sensor ID</th>
+                            <th>Timestamp</th>
+                            <th>Temperature</th>
+                            <th>Humidity</th>
+                            <th>Pressure</th>
+                            <th>Temp Status</th>
+                            <th>Humidity Status</th>
+                            <th>Pressure Trend</th>
+                            <th>Quality Score</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+            `;
+            
+            data.forEach(item => {
+                const timestamp = new Date(item.timestamp).toLocaleString();
+                tableHTML += `
+                    <tr>
+                        <td><strong>${item.sensor_id}</strong></td>
+                        <td>${timestamp}</td>
+                        <td>${item.temperature}°C</td>
+                        <td>${item.humidity}%</td>
+                        <td>${item.pressure} hPa</td>
+                        <td><span class="status-badge status-${item.temperature_status.toLowerCase()}">${item.temperature_status}</span></td>
+                        <td><span class="status-badge status-${item.humidity_status.toLowerCase()}">${item.humidity_status}</span></td>
+                        <td><span class="status-badge status-${item.pressure_trend.toLowerCase()}">${item.pressure_trend}</span></td>
+                        <td>${item.data_quality_score}%</td>
+                    </tr>
+                `;
+            });
+            
+            tableHTML += '</tbody></table>';
+            
+            container.innerHTML = tableHTML;
+            dataDisplay.classList.remove('hidden');
+            
+            // Hide the results section
+            document.getElementById('results').style.display = 'none';
+        }
+
+        async function clearHistory() {
+            if (confirm('Are you sure you want to clear all processed data history?')) {
+                showLoading('Clearing history...');
+                try {
+                    const response = await fetch('/api/clear-history');
+                    const data = await response.json();
+                    showResult(data, 'History Cleared Successfully');
+                    document.getElementById('data-display').classList.add('hidden');
+                } catch (error) {
+                    showError('Failed to clear history: ' + error.message);
+                }
+            }
+        }
+
         async function generateData() {
             showLoading('Generating sensor data...');
             try {
                 const response = await fetch('/api/generate-data');
                 const data = await response.json();
-                
-                // Store the sensor ID
-                currentSensorId = data.data.sensor_id;
-                updateCurrentDataDisplay();
-                
                 showResult(data, 'Data Generated Successfully');
             } catch (error) {
                 showError('Failed to generate data: ' + error.message);
@@ -410,13 +628,6 @@
             try {
                 const response = await fetch('/api/send-data');
                 const data = await response.json();
-                
-                // Update current sensor ID if it changed
-                if (data.sent_data && data.sent_data.sensor_id) {
-                    currentSensorId = data.sent_data.sensor_id;
-                    updateCurrentDataDisplay();
-                }
-                
                 showResult(data, 'Data Sent Successfully');
             } catch (error) {
                 showError('Failed to send data: ' + error.message);
@@ -429,7 +640,6 @@
                 const response = await fetch('/api/get-processed-data');
                 const data = await response.json();
                 
-                // Show data source information
                 let message = 'Processed Data Retrieved Successfully';
                 if (data.data_source === 'cached') {
                     message += ' (using cached data)';
@@ -475,24 +685,15 @@
             }
         }
 
-        function updateCurrentDataDisplay() {
-            const currentDataDiv = document.getElementById('current-data');
-            const currentSensorIdElement = document.getElementById('current-sensor-id');
-            
-            if (currentSensorId) {
-                currentDataDiv.style.display = 'block';
-                currentSensorIdElement.textContent = `Current Sensor ID: ${currentSensorId}`;
-            } else {
-                currentDataDiv.style.display = 'none';
-            }
-        }
-
         function showLoading(message) {
             const resultsDiv = document.getElementById('results');
             const jsonResult = document.getElementById('json-result');
             
             resultsDiv.style.display = 'block';
             jsonResult.innerHTML = `<div class="loading">${message}</div>`;
+            
+            // Hide data display when showing loading
+            document.getElementById('data-display').classList.add('hidden');
         }
 
         function showResult(data, message) {
@@ -501,6 +702,9 @@
             
             resultsDiv.style.display = 'block';
             jsonResult.innerHTML = `<div class="success">${message}</div>\n\n${JSON.stringify(data, null, 2)}`;
+            
+            // Hide data display when showing results
+            document.getElementById('data-display').classList.add('hidden');
         }
 
         function showError(message) {
@@ -509,6 +713,9 @@
             
             resultsDiv.style.display = 'block';
             jsonResult.innerHTML = `<div class="error">${message}</div>`;
+            
+            // Hide data display when showing error
+            document.getElementById('data-display').classList.add('hidden');
         }
     </script>
 </body>

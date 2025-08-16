@@ -4,6 +4,7 @@ import time
 import random
 import json
 import requests
+import threading
 from flask import Flask, jsonify
 from datetime import datetime
 
@@ -15,6 +16,11 @@ CONSUMER_URL = os.getenv('CONSUMER_URL', 'http://consumer:8002')
 
 # Store the last generated data
 last_generated_data = None
+
+# Automation control
+automation_running = False
+automation_thread = None
+automation_interval = 5  # seconds between data generation
 
 def generate_sensor_data():
     """Generate random sensor data"""
@@ -40,6 +46,54 @@ def send_data_to_consumer(data):
         print(f"Error sending data to consumer: {e}")
         return None
 
+def automation_worker():
+    """Background worker for automated data generation and sending"""
+    global automation_running, last_generated_data
+    
+    while automation_running:
+        try:
+            # Generate new data
+            data = generate_sensor_data()
+            last_generated_data = data
+            
+            print(f"🤖 Automated: Generated data for sensor {data['sensor_id']}")
+            
+            # Send to consumer
+            result = send_data_to_consumer(data)
+            if result:
+                print(f"✅ Automated: Data sent to consumer successfully")
+            else:
+                print(f"❌ Automated: Failed to send data to consumer")
+            
+            # Wait for next cycle
+            time.sleep(automation_interval)
+            
+        except Exception as e:
+            print(f"❌ Automation error: {e}")
+            time.sleep(automation_interval)
+
+def start_automation():
+    """Start the automated data generation"""
+    global automation_running, automation_thread
+    
+    if not automation_running:
+        automation_running = True
+        automation_thread = threading.Thread(target=automation_worker, daemon=True)
+        automation_thread.start()
+        print("🚀 Automation started")
+        return True
+    return False
+
+def stop_automation():
+    """Stop the automated data generation"""
+    global automation_running
+    
+    if automation_running:
+        automation_running = False
+        print("🛑 Automation stopped")
+        return True
+    return False
+
 @app.route('/')
 def home():
     """Home endpoint"""
@@ -47,9 +101,16 @@ def home():
         'service': 'Producer Service',
         'status': 'running',
         'port': SERVICE_PORT,
+        'automation': {
+            'running': automation_running,
+            'interval': automation_interval
+        },
         'endpoints': {
             'generate_data': '/generate-data',
             'send_data': '/send-data',
+            'start_automation': '/start-automation',
+            'stop_automation': '/stop-automation',
+            'automation_status': '/automation-status',
             'status': '/status'
         }
     })
@@ -91,6 +152,33 @@ def send_data():
             'error': 'Consumer service unavailable'
         }), 500
 
+@app.route('/start-automation')
+def start_auto():
+    """Start automated data generation"""
+    success = start_automation()
+    return jsonify({
+        'message': 'Automation started successfully' if success else 'Automation already running',
+        'automation_running': automation_running
+    })
+
+@app.route('/stop-automation')
+def stop_auto():
+    """Stop automated data generation"""
+    success = stop_automation()
+    return jsonify({
+        'message': 'Automation stopped successfully' if success else 'Automation not running',
+        'automation_running': automation_running
+    })
+
+@app.route('/automation-status')
+def automation_status():
+    """Get automation status"""
+    return jsonify({
+        'automation_running': automation_running,
+        'interval_seconds': automation_interval,
+        'last_data_sensor_id': last_generated_data['sensor_id'] if last_generated_data else None
+    })
+
 @app.route('/status')
 def status():
     """Service status"""
@@ -99,6 +187,7 @@ def status():
         'status': 'healthy',
         'timestamp': datetime.now().isoformat(),
         'consumer_url': CONSUMER_URL,
+        'automation_running': automation_running,
         'last_data_sensor_id': last_generated_data['sensor_id'] if last_generated_data else None
     })
 

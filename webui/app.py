@@ -97,6 +97,66 @@ def api_get_processed_data():
     except requests.exceptions.RequestException as e:
         return jsonify({'error': f'Error connecting to consumer: {str(e)}'}), 500
 
+@app.route('/api/start-automation')
+def api_start_automation():
+    """Start automated data generation"""
+    try:
+        response = requests.get(f"{PRODUCER_URL}/start-automation", timeout=5)
+        if response.status_code == 200:
+            return jsonify(response.json())
+        else:
+            return jsonify({'error': 'Failed to start automation'}), 500
+    except requests.exceptions.RequestException as e:
+        return jsonify({'error': f'Error connecting to producer: {str(e)}'}), 500
+
+@app.route('/api/stop-automation')
+def api_stop_automation():
+    """Stop automated data generation"""
+    try:
+        response = requests.get(f"{PRODUCER_URL}/stop-automation", timeout=5)
+        if response.status_code == 200:
+            return jsonify(response.json())
+        else:
+            return jsonify({'error': 'Failed to stop automation'}), 500
+    except requests.exceptions.RequestException as e:
+        return jsonify({'error': f'Error connecting to producer: {str(e)}'}), 500
+
+@app.route('/api/automation-status')
+def api_automation_status():
+    """Get automation status"""
+    try:
+        response = requests.get(f"{PRODUCER_URL}/automation-status", timeout=5)
+        if response.status_code == 200:
+            return jsonify(response.json())
+        else:
+            return jsonify({'error': 'Failed to get automation status'}), 500
+    except requests.exceptions.RequestException as e:
+        return jsonify({'error': f'Error connecting to producer: {str(e)}'}), 500
+
+@app.route('/api/view-all-data')
+def api_view_all_data():
+    """View all processed data"""
+    try:
+        response = requests.get(f"{CONSUMER_URL}/view-all-data", timeout=10)
+        if response.status_code == 200:
+            return jsonify(response.json())
+        else:
+            return jsonify({'error': 'Failed to get data history'}), 500
+    except requests.exceptions.RequestException as e:
+        return jsonify({'error': f'Error connecting to consumer: {str(e)}'}), 500
+
+@app.route('/api/clear-history')
+def api_clear_history():
+    """Clear data history"""
+    try:
+        response = requests.get(f"{CONSUMER_URL}/clear-history", timeout=5)
+        if response.status_code == 200:
+            return jsonify(response.json())
+        else:
+            return jsonify({'error': 'Failed to clear history'}), 500
+    except requests.exceptions.RequestException as e:
+        return jsonify({'error': f'Error connecting to consumer: {str(e)}'}), 500
+
 if __name__ == '__main__':
     print(f"WEB UI STARTED on port {SERVICE_PORT}")
     print(f"Producer URL: {PRODUCER_URL}")
