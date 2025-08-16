@@ -1,6 +1,6 @@
-# Microservices Learning Project
+# Microservices Sandbox
 
-A simple Docker-based microservices project for learning microservices architecture with real data exchange and a modern web interface.
+A simple Docker-based microservices project for learning microservices architecture with data exchange, performance monitoring and a modern web interface.
 
 ## Project Structure
 
