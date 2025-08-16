@@ -1,13 +1,131 @@
 #!/usr/bin/env python3
 import os
-import time
+import json
+import requests
+from flask import Flask, jsonify, request
+from datetime import datetime
 
-print("CONSUMER SERVICE STARTED")
-print(f"PORT: {os.getenv('SERVICE_PORT', '8002')}")
-print(f"PRODUCER_URL: {os.getenv('PRODUCER_URL', 'http://producer:8001')}")
+app = Flask(__name__)
 
-i = 1
-while True:
-    print(f"CONSUMER LOG #{i}: Service is alive")
-    time.sleep(5)
-    i += 1
+# Configuration
+SERVICE_PORT = int(os.getenv('SERVICE_PORT', 8002))
+PRODUCER_URL = os.getenv('PRODUCER_URL', 'http://producer:8001')
+
+def process_sensor_data(data):
+    """Process sensor data and add analysis"""
+    processed_data = data.copy()
+    
+    # Add processing timestamp
+    processed_data['processed_at'] = datetime.now().isoformat()
+    
+    # Analyze temperature
+    temp = data.get('temperature', 0)
+    if temp < 20:
+        processed_data['temperature_status'] = 'COLD'
+    elif temp > 23:
+        processed_data['temperature_status'] = 'WARM'
+    else:
+        processed_data['temperature_status'] = 'COMFORTABLE'
+    
+    # Analyze humidity
+    humidity = data.get('humidity', 0)
+    if humidity < 50:
+        processed_data['humidity_status'] = 'DRY'
+    elif humidity > 70:
+        processed_data['humidity_status'] = 'HUMID'
+    else:
+        processed_data['humidity_status'] = 'NORMAL'
+    
+    # Calculate pressure trend (mock calculation)
+    pressure = data.get('pressure', 0)
+    processed_data['pressure_trend'] = 'STABLE' if 1010 <= pressure <= 1015 else 'VARIABLE'
+    
+    # Add data quality score
+    processed_data['data_quality_score'] = 95.5
+    
+    return processed_data
+
+@app.route('/')
+def home():
+    """Home endpoint"""
+    return jsonify({
+        'service': 'Consumer Service',
+        'status': 'running',
+        'port': SERVICE_PORT,
+        'endpoints': {
+            'process_data': '/process-data',
+            'get_processed_data': '/get-processed-data',
+            'status': '/status'
+        }
+    })
+
+@app.route('/process-data', methods=['POST'])
+def process_data():
+    """Process incoming sensor data"""
+    try:
+        data = request.get_json()
+        
+        if not data:
+            return jsonify({'error': 'No data provided'}), 400
+        
+        # Process the data
+        processed_data = process_sensor_data(data)
+        
+        print(f"Processed data from sensor: {data.get('sensor_id', 'UNKNOWN')}")
+        
+        return jsonify({
+            'message': 'Data processed successfully',
+            'original_data': data,
+            'processed_data': processed_data,
+            'processing_timestamp': datetime.now().isoformat()
+        })
+        
+    except Exception as e:
+        return jsonify({
+            'error': f'Error processing data: {str(e)}'
+        }), 500
+
+@app.route('/get-processed-data')
+def get_processed_data():
+    """Get data from producer and process it"""
+    try:
+        # Get data from producer
+        response = requests.get(f"{PRODUCER_URL}/generate-data", timeout=5)
+        
+        if response.status_code == 200:
+            producer_data = response.json()
+            sensor_data = producer_data.get('data', {})
+            
+            # Process the data
+            processed_data = process_sensor_data(sensor_data)
+            
+            return jsonify({
+                'message': 'Data retrieved and processed successfully',
+                'producer_data': sensor_data,
+                'processed_data': processed_data,
+                'timestamp': datetime.now().isoformat()
+            })
+        else:
+            return jsonify({
+                'error': 'Failed to get data from producer'
+            }), 500
+            
+    except requests.exceptions.RequestException as e:
+        return jsonify({
+            'error': f'Error connecting to producer: {str(e)}'
+        }), 500
+
+@app.route('/status')
+def status():
+    """Service status"""
+    return jsonify({
+        'service': 'Consumer Service',
+        'status': 'healthy',
+        'timestamp': datetime.now().isoformat(),
+        'producer_url': PRODUCER_URL
+    })
+
+if __name__ == '__main__':
+    print(f"CONSUMER SERVICE STARTED on port {SERVICE_PORT}")
+    print(f"Producer URL: {PRODUCER_URL}")
+    app.run(host='0.0.0.0', port=SERVICE_PORT, debug=True)
