@@ -819,17 +819,24 @@
                 const data = await resp.json();
                 if (data.error) throw new Error(data.error);
                 const prod = data.producer || {};
-                const cons = data.consumer || {};
                 const running = !!(prod.running);
                 const rps = prod.throughput && prod.throughput.requests_per_second ? prod.throughput.requests_per_second.toFixed(1) : 'n/a';
                 const bps = prod.throughput && prod.throughput.bytes_per_second ? prod.throughput.bytes_per_second.toFixed(0) : 'n/a';
                 statusDiv.textContent = `Running: ${running} | Producer succ=${prod.stats ? prod.stats.succeeded : 'n/a'} fail=${prod.stats ? prod.stats.failed : 'n/a'} | RPS=${rps} | B/s=${bps}`;
                 if (!running) {
+                    // Finalize and persist logs via stop endpoint
                     clearInterval(benchmarkPolling);
                     benchmarkPolling = null;
-                    // show final combined result
-                    resultDiv.style.display = 'block';
-                    resultDiv.textContent = JSON.stringify(data, null, 2);
+                    try {
+                        const finalize = await fetch('/api/benchmark/stop', { method: 'POST' });
+                        const finalData = await finalize.json();
+                        resultDiv.style.display = 'block';
+                        resultDiv.textContent = JSON.stringify(finalData, null, 2);
+                    } catch (e) {
+                        // Fallback to last status data if stop fails
+                        resultDiv.style.display = 'block';
+                        resultDiv.textContent = JSON.stringify(data, null, 2);
+                    }
                     // Re-enable start button, disable stop
                     document.getElementById('bm-start').disabled = false;
                     document.getElementById('bm-stop').disabled = true;

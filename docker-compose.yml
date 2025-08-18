@@ -41,9 +41,12 @@ services:
       - SERVICE_PORT=8000
       - PRODUCER_URL=http://producer:8001
       - CONSUMER_URL=http://consumer:8002
+      - BENCHMARK_LOG_PATH=/data/benchmark_results.jsonl
     depends_on:
       - producer
       - consumer
+    volumes:
+      - ./webui_data:/data
     cpus: "2.0"
     mem_limit: "1g"
     restart: unless-stopped
