@@ -5,7 +5,7 @@ import random
 import json
 import requests
 import threading
-from flask import Flask, jsonify
+from flask import Flask, jsonify, request
 from datetime import datetime
 
 app = Flask(__name__)
@@ -21,6 +21,105 @@ last_generated_data = None
 automation_running = False
 automation_thread = None
 automation_interval = 5  # seconds between data generation
+
+# Benchmark state
+benchmark_running = False
+benchmark_thread = None
+benchmark_config = {
+    'duration_seconds': 0,
+    'payload_bytes': 0,
+    'workers': 1
+}
+benchmark_stats = {
+    'started_at': None,
+    'ended_at': None,
+    'attempted': 0,
+    'succeeded': 0,
+    'failed': 0,
+    'bytes_sent': 0
+}
+
+def _approximate_payload_of_size(base_data, target_bytes):
+    """Return a data dict whose JSON body is roughly target_bytes in size."""
+    try:
+        baseline = json.dumps(base_data)
+        baseline_len = len(baseline.encode('utf-8'))
+        extra_needed = max(0, target_bytes - baseline_len)
+        if extra_needed > 0:
+            base_data['padding'] = 'x' * extra_needed
+        return base_data
+    except Exception:
+        return base_data
+
+def _benchmark_worker(end_time):
+    global benchmark_stats, benchmark_running
+    session = requests.Session()
+    while benchmark_running and time.time() < end_time:
+        try:
+            data = generate_sensor_data()
+            # Apply payload size padding if configured
+            target = max(0, int(benchmark_config.get('payload_bytes', 0)))
+            if target > 0:
+                data = _approximate_payload_of_size(data, target)
+            payload = json.dumps(data)
+            headers = {'Content-Type': 'application/json'}
+            benchmark_stats['attempted'] += 1
+            resp = session.post(f"{CONSUMER_URL}/process-data", data=payload, headers=headers, timeout=5)
+            if resp.status_code == 200:
+                benchmark_stats['succeeded'] += 1
+                benchmark_stats['bytes_sent'] += len(payload.encode('utf-8'))
+            else:
+                benchmark_stats['failed'] += 1
+        except Exception:
+            benchmark_stats['failed'] += 1
+            # small backoff to avoid tight error loops
+            time.sleep(0.001)
+
+def _reset_benchmark_stats():
+    global benchmark_stats
+    benchmark_stats = {
+        'started_at': datetime.now().isoformat(),
+        'ended_at': None,
+        'attempted': 0,
+        'succeeded': 0,
+        'failed': 0,
+        'bytes_sent': 0
+    }
+
+def start_benchmark(duration_seconds: int, payload_bytes: int, workers: int):
+    global benchmark_running, benchmark_thread, benchmark_config
+    if benchmark_running:
+        return False
+    benchmark_config = {
+        'duration_seconds': max(1, int(duration_seconds)),
+        'payload_bytes': max(0, int(payload_bytes)),
+        'workers': max(1, int(workers))
+    }
+    _reset_benchmark_stats()
+    benchmark_running = True
+    end_time = time.time() + benchmark_config['duration_seconds']
+    # Launch worker threads
+    threads = []
+    for _ in range(benchmark_config['workers']):
+        t = threading.Thread(target=_benchmark_worker, args=(end_time,), daemon=True)
+        t.start()
+        threads.append(t)
+
+    def joiner():
+        global benchmark_running
+        for t in threads:
+            t.join()
+        benchmark_running = False
+        benchmark_stats['ended_at'] = datetime.now().isoformat()
+
+    benchmark_thread = threading.Thread(target=joiner, daemon=True)
+    benchmark_thread.start()
+    return True
+
+def stop_benchmark():
+    global benchmark_running
+    benchmark_running = False
+    return True
 
 def generate_sensor_data():
     """Generate random sensor data"""
@@ -188,7 +287,58 @@ def status():
         'timestamp': datetime.now().isoformat(),
         'consumer_url': CONSUMER_URL,
         'automation_running': automation_running,
-        'last_data_sensor_id': last_generated_data['sensor_id'] if last_generated_data else None
+        'last_data_sensor_id': last_generated_data['sensor_id'] if last_generated_data else None,
+        'benchmark_running': benchmark_running
+    })
+
+# Benchmark endpoints
+@app.route('/benchmark/start', methods=['POST'])
+def benchmark_start():
+    try:
+        payload = request.get_json(force=True) if request.data else {}
+        duration = int(payload.get('duration_seconds', 10))
+        size_bytes = int(payload.get('payload_bytes', 0))
+        workers = int(payload.get('workers', 1))
+        started = start_benchmark(duration, size_bytes, workers)
+        return jsonify({
+            'started': started,
+            'running': benchmark_running,
+            'config': benchmark_config,
+            'stats': benchmark_stats
+        }), (200 if started else 409)
+    except Exception as e:
+        return jsonify({'error': str(e)}), 400
+
+@app.route('/benchmark/stop')
+def benchmark_stop():
+    stop_benchmark()
+    return jsonify({
+        'running': benchmark_running,
+        'stats': benchmark_stats
+    })
+
+@app.route('/benchmark/status')
+def benchmark_status():
+    # add elapsed seconds and throughput estimates
+    elapsed = None
+    try:
+        if benchmark_stats['started_at']:
+            start_dt = datetime.fromisoformat(benchmark_stats['started_at'])
+            end_dt = datetime.now() if benchmark_stats['ended_at'] is None else datetime.fromisoformat(benchmark_stats['ended_at'])
+            elapsed = max(0.0, (end_dt - start_dt).total_seconds())
+    except Exception:
+        elapsed = None
+    rps = (benchmark_stats['succeeded'] / elapsed) if elapsed and elapsed > 0 else None
+    bps = (benchmark_stats['bytes_sent'] / elapsed) if elapsed and elapsed > 0 else None
+    return jsonify({
+        'running': benchmark_running,
+        'config': benchmark_config,
+        'stats': benchmark_stats,
+        'elapsed_seconds': elapsed,
+        'throughput': {
+            'requests_per_second': rps,
+            'bytes_per_second': bps
+        }
     })
 
 if __name__ == '__main__':

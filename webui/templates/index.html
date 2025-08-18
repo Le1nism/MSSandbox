@@ -197,6 +197,28 @@
             font-size: 1.2em;
         }
 
+        .input-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+            margin-bottom: 10px;
+        }
+
+        .input-row label {
+            display: block;
+            font-weight: 600;
+            color: #495057;
+            margin-bottom: 5px;
+        }
+
+        .input-row input {
+            width: 100%;
+            padding: 8px 10px;
+            border: 1px solid #ced4da;
+            border-radius: 6px;
+            font-size: 0.95em;
+        }
+
         .data-display {
             background: white;
             border: 1px solid #e9ecef;
@@ -401,6 +423,41 @@
                     <button class="btn" onclick="clearHistory()">Clear History</button>
                     <button class="btn" onclick="showManualInput()">Manual Input</button>
                 </div>
+
+                <div class="control-card">
+                    <h3>Benchmark</h3>
+                    <p>Push system at full speed and measure throughput</p>
+                    <div class="input-row">
+                        <div>
+                            <label for="bm-duration">Duration (s)</label>
+                            <input id="bm-duration" type="number" value="15" min="1" />
+                        </div>
+                        <div>
+                            <label for="bm-workers">Workers</label>
+                            <input id="bm-workers" type="number" value="4" min="1" />
+                        </div>
+                    </div>
+                    <div class="input-row">
+                        <div>
+                            <label for="bm-bytes">Payload size (bytes)</label>
+                            <input id="bm-bytes" type="number" value="512" min="0" step="1" />
+                        </div>
+                        <div>
+                            <label>&nbsp;</label>
+                            <button class="btn btn-start" id="bm-start" onclick="startBenchmark()">Start Benchmark</button>
+                        </div>
+                    </div>
+                    <div class="input-row">
+                        <div>
+                            <button class="btn btn-stop" id="bm-stop" onclick="stopBenchmark()" disabled>Stop</button>
+                        </div>
+                        <div>
+                            <button class="btn btn-view" onclick="loadBenchmarkLogs()">View Last Logs</button>
+                        </div>
+                    </div>
+                    <div id="benchmark-status" class="automation-status">Benchmark idle</div>
+                    <div class="json-display" id="benchmark-result" style="margin-top:10px; display:none;"></div>
+                </div>
             </div>
 
             <div class="data-flow">
@@ -445,6 +502,7 @@
 
     <script>
         let automationRunning = false;
+        let benchmarkPolling = null;
 
         // Check service status on page load
         document.addEventListener('DOMContentLoaded', function() {
@@ -716,6 +774,102 @@
             
             // Hide data display when showing error
             document.getElementById('data-display').classList.add('hidden');
+        }
+
+        // -------------------------
+        // Benchmarking functions
+        // -------------------------
+        async function startBenchmark() {
+            const duration = parseInt(document.getElementById('bm-duration').value || '15', 10);
+            const workers = parseInt(document.getElementById('bm-workers').value || '4', 10);
+            const bytes = parseInt(document.getElementById('bm-bytes').value || '0', 10);
+            const startBtn = document.getElementById('bm-start');
+            const stopBtn = document.getElementById('bm-stop');
+            const statusDiv = document.getElementById('benchmark-status');
+            const resultDiv = document.getElementById('benchmark-result');
+            resultDiv.style.display = 'none';
+            statusDiv.textContent = 'Starting benchmark...';
+            startBtn.disabled = true;
+            stopBtn.disabled = false;
+            try {
+                const resp = await fetch('/api/benchmark/start', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ duration_seconds: duration, payload_bytes: bytes, workers })
+                });
+                const data = await resp.json();
+                if (!resp.ok || data.error) throw new Error(data.error || 'Failed to start benchmark');
+                statusDiv.textContent = 'Benchmark running...';
+                // Start polling status
+                if (benchmarkPolling) clearInterval(benchmarkPolling);
+                benchmarkPolling = setInterval(pollBenchmarkStatus, 1000);
+            } catch (e) {
+                statusDiv.textContent = 'Error starting benchmark';
+                showError('Start benchmark failed: ' + e.message);
+                startBtn.disabled = false;
+                stopBtn.disabled = true;
+            }
+        }
+
+        async function pollBenchmarkStatus() {
+            const statusDiv = document.getElementById('benchmark-status');
+            const resultDiv = document.getElementById('benchmark-result');
+            try {
+                const resp = await fetch('/api/benchmark/status');
+                const data = await resp.json();
+                if (data.error) throw new Error(data.error);
+                const prod = data.producer || {};
+                const cons = data.consumer || {};
+                const running = !!(prod.running);
+                const rps = prod.throughput && prod.throughput.requests_per_second ? prod.throughput.requests_per_second.toFixed(1) : 'n/a';
+                const bps = prod.throughput && prod.throughput.bytes_per_second ? prod.throughput.bytes_per_second.toFixed(0) : 'n/a';
+                statusDiv.textContent = `Running: ${running} | Producer succ=${prod.stats ? prod.stats.succeeded : 'n/a'} fail=${prod.stats ? prod.stats.failed : 'n/a'} | RPS=${rps} | B/s=${bps}`;
+                if (!running) {
+                    clearInterval(benchmarkPolling);
+                    benchmarkPolling = null;
+                    // show final combined result
+                    resultDiv.style.display = 'block';
+                    resultDiv.textContent = JSON.stringify(data, null, 2);
+                    // Re-enable start button, disable stop
+                    document.getElementById('bm-start').disabled = false;
+                    document.getElementById('bm-stop').disabled = true;
+                }
+            } catch (e) {
+                statusDiv.textContent = 'Error polling benchmark status';
+            }
+        }
+
+        async function stopBenchmark() {
+            const startBtn = document.getElementById('bm-start');
+            const stopBtn = document.getElementById('bm-stop');
+            const statusDiv = document.getElementById('benchmark-status');
+            const resultDiv = document.getElementById('benchmark-result');
+            try {
+                const resp = await fetch('/api/benchmark/stop', { method: 'POST' });
+                const data = await resp.json();
+                statusDiv.textContent = 'Benchmark stopped';
+                resultDiv.style.display = 'block';
+                resultDiv.textContent = JSON.stringify(data, null, 2);
+            } catch (e) {
+                showError('Stop benchmark failed: ' + e.message);
+            } finally {
+                if (benchmarkPolling) clearInterval(benchmarkPolling);
+                benchmarkPolling = null;
+                startBtn.disabled = false;
+                stopBtn.disabled = true;
+            }
+        }
+
+        async function loadBenchmarkLogs() {
+            const resultDiv = document.getElementById('benchmark-result');
+            try {
+                const resp = await fetch('/api/benchmark/logs?n=10');
+                const data = await resp.json();
+                resultDiv.style.display = 'block';
+                resultDiv.textContent = JSON.stringify(data, null, 2);
+            } catch (e) {
+                showError('Failed to load benchmark logs: ' + e.message);
+            }
         }
     </script>
 </body>

@@ -18,6 +18,24 @@ last_received_data = None
 processed_data_history = []
 max_history_size = 100  # Keep last 100 entries
 
+# Benchmark tracking state
+benchmark_tracking_enabled = False
+benchmark_started_at = None
+benchmark_last_updated_at = None
+benchmark_counters = {
+    'processed_count': 0,
+    'bytes_received': 0
+}
+
+def reset_benchmark_counters():
+    global benchmark_counters, benchmark_started_at, benchmark_last_updated_at
+    benchmark_counters = {
+        'processed_count': 0,
+        'bytes_received': 0
+    }
+    benchmark_started_at = datetime.now().isoformat()
+    benchmark_last_updated_at = benchmark_started_at
+
 def process_sensor_data(data):
     """Process sensor data and add analysis"""
     processed_data = data.copy()
@@ -84,9 +102,12 @@ def home():
 @app.route('/process-data', methods=['POST'])
 def process_data():
     """Process incoming sensor data"""
-    global last_received_data
+    global last_received_data, benchmark_tracking_enabled, benchmark_counters, benchmark_last_updated_at
     
     try:
+        # Capture raw request size for throughput accounting
+        raw_payload = request.get_data(cache=True)
+        raw_size = len(raw_payload) if raw_payload is not None else 0
         data = request.get_json()
         
         if not data:
@@ -100,6 +121,12 @@ def process_data():
         
         # Add to history
         add_to_history(processed_data)
+
+        # If benchmark tracking is enabled, update counters
+        if benchmark_tracking_enabled:
+            benchmark_counters['processed_count'] += 1
+            benchmark_counters['bytes_received'] += raw_size
+            benchmark_last_updated_at = datetime.now().isoformat()
         
         print(f"Processed data from sensor: {data.get('sensor_id', 'UNKNOWN')}")
         
@@ -114,6 +141,41 @@ def process_data():
         return jsonify({
             'error': f'Error processing data: {str(e)}'
         }), 500
+
+@app.route('/benchmark/enable')
+def benchmark_enable():
+    """Enable consumer-side benchmark tracking and reset counters"""
+    global benchmark_tracking_enabled
+    reset_benchmark_counters()
+    benchmark_tracking_enabled = True
+    return jsonify({
+        'message': 'Benchmark tracking enabled',
+        'enabled': True,
+        'started_at': benchmark_started_at
+    })
+
+@app.route('/benchmark/disable')
+def benchmark_disable():
+    """Disable consumer-side benchmark tracking"""
+    global benchmark_tracking_enabled, benchmark_last_updated_at
+    benchmark_tracking_enabled = False
+    benchmark_last_updated_at = datetime.now().isoformat()
+    return jsonify({
+        'message': 'Benchmark tracking disabled',
+        'enabled': False,
+        'last_updated_at': benchmark_last_updated_at
+    })
+
+@app.route('/benchmark/stats')
+def benchmark_stats():
+    """Return current benchmark counters"""
+    return jsonify({
+        'enabled': benchmark_tracking_enabled,
+        'started_at': benchmark_started_at,
+        'last_updated_at': benchmark_last_updated_at,
+        'processed_count': benchmark_counters['processed_count'],
+        'bytes_received': benchmark_counters['bytes_received']
+    })
 
 @app.route('/get-processed-data')
 def get_processed_data():

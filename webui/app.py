@@ -4,6 +4,7 @@ import json
 import requests
 from flask import Flask, render_template, jsonify, request
 from datetime import datetime
+from pathlib import Path
 
 app = Flask(__name__)
 
@@ -11,6 +12,18 @@ app = Flask(__name__)
 SERVICE_PORT = int(os.getenv('SERVICE_PORT', 8000))
 PRODUCER_URL = os.getenv('PRODUCER_URL', 'http://producer:8001')
 CONSUMER_URL = os.getenv('CONSUMER_URL', 'http://consumer:8002')
+
+# Benchmark log file (JSON Lines) inside the container filesystem
+BENCHMARK_LOG_PATH = os.getenv('BENCHMARK_LOG_PATH', str(Path(__file__).parent / 'benchmark_results.jsonl'))
+
+def append_benchmark_log(record: dict):
+    try:
+        Path(BENCHMARK_LOG_PATH).parent.mkdir(parents=True, exist_ok=True)
+        with open(BENCHMARK_LOG_PATH, 'a', encoding='utf-8') as f:
+            f.write(json.dumps(record) + '\n')
+    except Exception as e:
+        # Non-fatal; surface in API responses when appropriate
+        print(f"Failed to write benchmark log: {e}")
 
 def check_service_health(service_name, url):
     """Check if a service is healthy"""
@@ -156,6 +169,95 @@ def api_clear_history():
             return jsonify({'error': 'Failed to clear history'}), 500
     except requests.exceptions.RequestException as e:
         return jsonify({'error': f'Error connecting to consumer: {str(e)}'}), 500
+
+# -----------------------------
+# Benchmark orchestration APIs
+# -----------------------------
+
+@app.route('/api/benchmark/start', methods=['POST'])
+def api_benchmark_start():
+    """Enable consumer counters and start producer benchmark."""
+    try:
+        payload = request.get_json(force=True)
+        duration = int(payload.get('duration_seconds', 15))
+        payload_bytes = int(payload.get('payload_bytes', 512))
+        workers = int(payload.get('workers', 4))
+
+        # Enable consumer tracking
+        try:
+            requests.get(f"{CONSUMER_URL}/benchmark/enable", timeout=5)
+        except requests.exceptions.RequestException:
+            pass
+
+        # Start producer benchmark
+        resp = requests.post(
+            f"{PRODUCER_URL}/benchmark/start",
+            json={
+                'duration_seconds': duration,
+                'payload_bytes': payload_bytes,
+                'workers': workers
+            },
+            headers={'Content-Type': 'application/json'},
+            timeout=10
+        )
+        return jsonify(resp.json()), resp.status_code
+    except Exception as e:
+        return jsonify({'error': f'Failed to start benchmark: {str(e)}'}), 400
+
+@app.route('/api/benchmark/status')
+def api_benchmark_status():
+    """Return combined status from producer and consumer."""
+    try:
+        prod = requests.get(f"{PRODUCER_URL}/benchmark/status", timeout=5)
+        cons = requests.get(f"{CONSUMER_URL}/benchmark/stats", timeout=5)
+        return jsonify({
+            'producer': prod.json() if prod.ok else {'error': 'producer status error'},
+            'consumer': cons.json() if cons.ok else {'error': 'consumer status error'},
+            'timestamp': datetime.now().isoformat()
+        })
+    except requests.exceptions.RequestException as e:
+        return jsonify({'error': f'Error querying benchmark status: {str(e)}'}), 500
+
+@app.route('/api/benchmark/stop', methods=['POST'])
+def api_benchmark_stop():
+    """Stop the producer benchmark and disable consumer tracking; log results."""
+    try:
+        prod = requests.get(f"{PRODUCER_URL}/benchmark/stop", timeout=5)
+        cons_disable = requests.get(f"{CONSUMER_URL}/benchmark/disable", timeout=5)
+        # Fetch final stats
+        prod_status = requests.get(f"{PRODUCER_URL}/benchmark/status", timeout=5)
+        cons_stats = requests.get(f"{CONSUMER_URL}/benchmark/stats", timeout=5)
+        result = {
+            'producer': prod_status.json() if prod_status.ok else {'error': 'producer status error'},
+            'consumer': cons_stats.json() if cons_stats.ok else {'error': 'consumer stats error'},
+            'timestamp': datetime.now().isoformat()
+        }
+        # Persist log entry
+        append_benchmark_log(result)
+        return jsonify(result)
+    except requests.exceptions.RequestException as e:
+        return jsonify({'error': f'Error stopping benchmark: {str(e)}'}), 500
+
+@app.route('/api/benchmark/logs')
+def api_benchmark_logs():
+    """Return last N benchmark log lines (default 10)."""
+    try:
+        n = int(request.args.get('n', 10))
+        if not Path(BENCHMARK_LOG_PATH).exists():
+            return jsonify({'logs': [], 'path': BENCHMARK_LOG_PATH})
+        with open(BENCHMARK_LOG_PATH, 'r', encoding='utf-8') as f:
+            lines = f.readlines()
+        tail = lines[-n:]
+        # Parse JSONL
+        logs = []
+        for line in tail:
+            try:
+                logs.append(json.loads(line))
+            except Exception:
+                continue
+        return jsonify({'logs': logs, 'path': BENCHMARK_LOG_PATH})
+    except Exception as e:
+        return jsonify({'error': f'Error reading logs: {str(e)}'}), 500
 
 if __name__ == '__main__':
     print(f"WEB UI STARTED on port {SERVICE_PORT}")
