@@ -31,6 +31,20 @@
 		.btn-view { background: #6a61e0; border-color: #6a61e0; }
 		.status { margin-top: 10px; font-weight: 600; color: #b4b0ff; }
 		.json-display { background: #151525; border: 1px solid #23233a; border-radius: 6px; padding: 14px; font-family: 'Courier New', monospace; white-space: pre-wrap; margin-top: 12px; }
+
+		/* Cards grid for previous runs */
+		.cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 14px; margin-top: 12px; }
+		.card-run { background: #16162a; border: 1px solid #23233a; border-radius: 10px; padding: 14px; }
+		.card-run .header { display: flex; justify-content: space-between; align-items: center; background: transparent; padding: 0; }
+		.card-run .title { color: #c8c8e0; font-weight: 700; font-size: 1.05em; }
+		.card-run .sub { color: #8f8fb3; font-size: 0.85em; }
+		.badge { padding: 3px 8px; border-radius: 999px; font-size: 0.75em; font-weight: 700; }
+		.badge-ok { background: #142a20; color: #91ffb1; border: 1px solid #244b3f; }
+		.badge-warn { background: #2a1620; color: #ff9aa2; border: 1px solid #4b2433; }
+		.metrics-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 10px; }
+		.metric { background: #141424; border: 1px solid #23233a; border-radius: 8px; padding: 10px; }
+		.metric .label { color: #8f8fb3; font-size: 0.8em; margin-bottom: 4px; }
+		.metric .value { color: #e6e6f0; font-weight: 700; font-size: 1.05em; word-break: break-word; }
 	</style>
 </head>
 <body>
@@ -69,6 +83,14 @@
 				</div>
 				<div id="benchmark-status" class="status">Benchmark idle</div>
 				<div class="json-display" id="benchmark-result" style="display:none;"></div>
+			</div>
+
+			<div class="card">
+				<h3>Previous Runs</h3>
+				<div class="actions">
+					<button class="btn btn-view" onclick="loadBenchmarkLogs()">Refresh</button>
+				</div>
+				<div id="logs-cards" class="cards"></div>
 			</div>
 		</div>
 	</div>
@@ -146,8 +168,74 @@
 
 		async function loadBenchmarkLogs() {
 			const resultDiv = document.getElementById('benchmark-result');
-			try { const resp = await fetch('/api/benchmark/logs?n=10'); const data = await resp.json(); resultDiv.style.display = 'block'; resultDiv.textContent = JSON.stringify(data, null, 2); }
-			catch (e) { resultDiv.style.display = 'block'; resultDiv.textContent = 'Failed to load logs'; }
+			const cards = document.getElementById('logs-cards');
+			try {
+				const resp = await fetch('/api/benchmark/logs?n=12');
+				const data = await resp.json();
+				const logs = Array.isArray(data.logs) ? data.logs : [];
+				cards.innerHTML = renderLogCards(logs);
+				// Optionally keep raw JSON collapsed
+				resultDiv.style.display = 'none';
+			} catch (e) {
+				cards.innerHTML = '<div class="card-run"><div class="sub">Failed to load logs</div></div>';
+			}
+		}
+
+		function renderLogCards(logs) {
+			if (!logs || logs.length === 0) {
+				return '<div class="card-run"><div class="sub">No logs yet</div></div>';
+			}
+			return logs.map((log, idx) => {
+				const t = log.timestamp || '';
+				const prod = log.producer || {};
+				const cons = log.consumer || {};
+				const cfg = prod.config || {};
+				const stats = prod.stats || {};
+				const thr = prod.throughput || {};
+				const ok = (stats.failed || 0) === 0;
+				const rps = isFiniteNum(thr.requests_per_second) ? thr.requests_per_second.toFixed(1) : 'n/a';
+				const bps = isFiniteNum(thr.bytes_per_second) ? formatBytes(thr.bytes_per_second) + '/s' : 'n/a';
+				const sz = cfg.payload_bytes ? formatBytes(cfg.payload_bytes) : 'default';
+				const elapsed = isFiniteNum(prod.elapsed_seconds) ? prod.elapsed_seconds.toFixed(1) + 's' : '—';
+				const consCount = (typeof cons.processed_count === 'number') ? cons.processed_count : 'n/a';
+				const consBytes = (typeof cons.bytes_received === 'number') ? formatBytes(cons.bytes_received) : 'n/a';
+				return `
+					<div class="card-run">
+						<div class="header">
+							<div>
+								<div class="title">Run ${logs.length - idx}</div>
+								<div class="sub">${escapeHtml(t)}</div>
+							</div>
+							<span class="badge ${ok ? 'badge-ok' : 'badge-warn'}">${ok ? 'OK' : 'WARN'}</span>
+						</div>
+
+						<div class="metrics-row">
+							<div class="metric"><div class="label">Duration</div><div class="value">${elapsed}</div></div>
+							<div class="metric"><div class="label">Workers</div><div class="value">${cfg.workers || '1'}</div></div>
+							<div class="metric"><div class="label">Payload</div><div class="value">${sz}</div></div>
+							<div class="metric"><div class="label">Succeeded / Failed</div><div class="value">${stats.succeeded || 0} / ${stats.failed || 0}</div></div>
+							<div class="metric"><div class="label">Throughput</div><div class="value">${rps} rps</div></div>
+							<div class="metric"><div class="label">Bandwidth</div><div class="value">${bps}</div></div>
+							<div class="metric"><div class="label">Consumer processed</div><div class="value">${consCount}</div></div>
+							<div class="metric"><div class="label">Consumer bytes</div><div class="value">${consBytes}</div></div>
+						</div>
+					</div>
+				`;
+			}).join('');
+		}
+
+		function isFiniteNum(n) { return typeof n === 'number' && isFinite(n); }
+		function formatBytes(num) {
+			try {
+				const units = ['B','KB','MB','GB','TB'];
+				let n = Number(num);
+				if (!isFinite(n) || n < 0) return '0 B';
+				let i = 0; while (n >= 1024 && i < units.length - 1) { n /= 1024; i++; }
+				return `${n.toFixed(n >= 10 || i === 0 ? 0 : 1)} ${units[i]}`;
+			} catch (_) { return String(num); }
+		}
+		function escapeHtml(s) {
+			return String(s || '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;','\'':'&#39;'}[c]));
 		}
 	</script>
 </body>
