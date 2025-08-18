@@ -16,6 +16,12 @@ CONSUMER_URL = os.getenv('CONSUMER_URL', 'http://consumer:8002')
 # Benchmark log file (JSON Lines) inside the container filesystem
 BENCHMARK_LOG_PATH = os.getenv('BENCHMARK_LOG_PATH', str(Path(__file__).parent / 'benchmark_results.jsonl'))
 
+# Ensure the log directory exists at startup (works both in Docker and local runs)
+try:
+    Path(BENCHMARK_LOG_PATH).parent.mkdir(parents=True, exist_ok=True)
+except Exception as e:
+    print(f"Failed to ensure benchmark log directory exists: {e}")
+
 def append_benchmark_log(record: dict):
     try:
         Path(BENCHMARK_LOG_PATH).parent.mkdir(parents=True, exist_ok=True)
