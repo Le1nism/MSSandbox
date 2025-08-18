@@ -13,7 +13,8 @@
 
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background: #0f0e17;
+            color: #e6e6f0;
             min-height: 100vh;
             padding: 20px;
         }
@@ -21,15 +22,15 @@
         .container {
             max-width: 1400px;
             margin: 0 auto;
-            background: white;
-            border-radius: 15px;
-            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+            background: #12121a;
+            border-radius: 12px;
+            box-shadow: 0 10px 24px rgba(0,0,0,0.4);
             overflow: hidden;
         }
 
         .header {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
+            background: #17172a;
+            color: #e6e6f0;
             padding: 30px;
             text-align: center;
         }
@@ -48,8 +49,8 @@
             display: flex;
             justify-content: space-around;
             padding: 20px;
-            background: #f8f9fa;
-            border-bottom: 1px solid #e9ecef;
+            background: #161622;
+            border-bottom: 1px solid #252538;
         }
 
         .service-status {
@@ -60,15 +61,15 @@
         }
 
         .service-status.healthy {
-            background: #d4edda;
-            color: #155724;
-            border: 1px solid #c3e6cb;
+            background: #1a1f2e;
+            color: #91ffb1;
+            border: 1px solid #244b3f;
         }
 
         .service-status.unhealthy {
-            background: #f8d7da;
-            color: #721c24;
-            border: 1px solid #f5c6cb;
+            background: #1f1a2e;
+            color: #ff9aa2;
+            border: 1px solid #4b2433;
         }
 
         .main-content {
@@ -76,8 +77,8 @@
         }
 
         .automation-controls {
-            background: #e8f5e8;
-            border: 1px solid #c3e6cb;
+            background: #141424;
+            border: 1px solid #23233a;
             border-radius: 10px;
             padding: 20px;
             margin-bottom: 30px;
@@ -97,20 +98,20 @@
         }
 
         .btn {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-            border: none;
-            padding: 12px 24px;
-            border-radius: 25px;
+            background: #5b51d8;
+            color: #ffffff;
+            border: 1px solid #6a61e0;
+            padding: 10px 20px;
+            border-radius: 10px;
             cursor: pointer;
-            font-size: 1em;
-            transition: all 0.3s ease;
+            font-size: 0.95em;
+            transition: background 0.2s ease, transform 0.1s ease;
             min-width: 120px;
         }
 
         .btn:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+            transform: translateY(-1px);
+            background: #6a61e0;
         }
 
         .btn:disabled {
@@ -119,17 +120,9 @@
             transform: none;
         }
 
-        .btn-start {
-            background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
-        }
-
-        .btn-stop {
-            background: linear-gradient(135deg, #dc3545 0%, #fd7e14 100%);
-        }
-
-        .btn-view {
-            background: linear-gradient(135deg, #17a2b8 0%, #6f42c1 100%);
-        }
+        .btn-start { background: #2cce89; border-color: #2cce89; }
+        .btn-stop { background: #e0526f; border-color: #e0526f; }
+        .btn-view { background: #6a61e0; border-color: #6a61e0; }
 
         .automation-status {
             font-size: 1.1em;
@@ -137,13 +130,8 @@
             margin-top: 10px;
         }
 
-        .automation-status.running {
-            color: #28a745;
-        }
-
-        .automation-status.stopped {
-            color: #dc3545;
-        }
+        .automation-status.running { color: #2cce89; }
+        .automation-status.stopped { color: #e0526f; }
 
         .flow-diagram {
             display: flex;
@@ -151,28 +139,28 @@
             align-items: center;
             margin-bottom: 40px;
             padding: 20px;
-            background: #f8f9fa;
+            background: #141424;
             border-radius: 10px;
         }
 
         .service-box {
             text-align: center;
             padding: 20px;
-            background: white;
+            background: #16162a;
             border-radius: 10px;
-            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+            box-shadow: 0 2px 10px rgba(0,0,0,0.4);
             flex: 1;
             margin: 0 10px;
         }
 
         .service-box h3 {
-            color: #667eea;
+            color: #b4b0ff;
             margin-bottom: 10px;
         }
 
         .arrow {
             font-size: 2em;
-            color: #667eea;
+            color: #6a61e0;
             margin: 0 20px;
         }
 
@@ -184,15 +172,15 @@
         }
 
         .control-card {
-            background: white;
-            border: 1px solid #e9ecef;
+            background: #141424;
+            border: 1px solid #23233a;
             border-radius: 10px;
             padding: 20px;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+            box-shadow: 0 2px 10px rgba(0,0,0,0.3);
         }
 
         .control-card h3 {
-            color: #495057;
+            color: #d2d2e6;
             margin-bottom: 15px;
             font-size: 1.2em;
         }
@@ -220,8 +208,8 @@
         }
 
         .data-display {
-            background: white;
-            border: 1px solid #e9ecef;
+            background: #141424;
+            border: 1px solid #23233a;
             border-radius: 10px;
             padding: 20px;
             margin-top: 20px;
@@ -230,7 +218,7 @@
         }
 
         .data-display h3 {
-            color: #495057;
+            color: #d2d2e6;
             margin-bottom: 15px;
         }
 
@@ -242,23 +230,23 @@
 
         .data-table th,
         .data-table td {
-            border: 1px solid #dee2e6;
+            border: 1px solid #2a2a3a;
             padding: 12px;
             text-align: left;
         }
 
         .data-table th {
-            background: #f8f9fa;
+            background: #1a1a2b;
             font-weight: bold;
-            color: #495057;
+            color: #c8c8e0;
         }
 
         .data-table tr:nth-child(even) {
-            background: #f8f9fa;
+            background: #151525;
         }
 
         .data-table tr:hover {
-            background: #e9ecef;
+            background: #181832;
         }
 
         .status-badge {
@@ -268,18 +256,18 @@
             font-weight: bold;
         }
 
-        .status-cold { background: #d1ecf1; color: #0c5460; }
-        .status-comfortable { background: #d4edda; color: #155724; }
-        .status-warm { background: #f8d7da; color: #721c24; }
-        .status-dry { background: #fff3cd; color: #856404; }
-        .status-normal { background: #d4edda; color: #155724; }
-        .status-humid { background: #d1ecf1; color: #0c5460; }
-        .status-stable { background: #d4edda; color: #155724; }
-        .status-variable { background: #f8d7da; color: #721c24; }
+        .status-cold { background: #16324b; color: #a7c5eb; }
+        .status-comfortable { background: #1b3a2a; color: #91ffb1; }
+        .status-warm { background: #4b1f2b; color: #ff9aa2; }
+        .status-dry { background: #4b4120; color: #ffe29a; }
+        .status-normal { background: #1b3a2a; color: #91ffb1; }
+        .status-humid { background: #16324b; color: #a7c5eb; }
+        .status-stable { background: #1b3a2a; color: #91ffb1; }
+        .status-variable { background: #4b1f2b; color: #ff9aa2; }
 
         .results {
-            background: white;
-            border: 1px solid #e9ecef;
+            background: #141424;
+            border: 1px solid #23233a;
             border-radius: 10px;
             padding: 20px;
             margin-top: 20px;
@@ -291,8 +279,8 @@
         }
 
         .json-display {
-            background: #f8f9fa;
-            border: 1px solid #e9ecef;
+            background: #151525;
+            border: 1px solid #23233a;
             border-radius: 5px;
             padding: 15px;
             font-family: 'Courier New', monospace;
@@ -304,38 +292,38 @@
 
         .loading {
             text-align: center;
-            color: #667eea;
+            color: #b4b0ff;
             font-style: italic;
         }
 
         .error {
-            color: #dc3545;
-            background: #f8d7da;
-            border: 1px solid #f5c6cb;
+            color: #ff9aa2;
+            background: #2a1620;
+            border: 1px solid #4b2433;
             border-radius: 5px;
             padding: 10px;
             margin-top: 10px;
         }
 
         .success {
-            color: #155724;
-            background: #d4edda;
-            border: 1px solid #c3e6cb;
+            color: #91ffb1;
+            background: #142a20;
+            border: 1px solid #244b3f;
             border-radius: 5px;
             padding: 10px;
             margin-top: 10px;
         }
 
         .data-flow {
-            background: #e3f2fd;
-            border: 1px solid #bbdefb;
+            background: #141424;
+            border: 1px solid #23233a;
             border-radius: 10px;
             padding: 20px;
             margin-top: 20px;
         }
 
         .data-flow h3 {
-            color: #1976d2;
+            color: #b4b0ff;
             margin-bottom: 15px;
         }
 
@@ -344,9 +332,9 @@
             align-items: center;
             margin-bottom: 10px;
             padding: 10px;
-            background: white;
+            background: #16162a;
             border-radius: 5px;
-            border-left: 4px solid #1976d2;
+            border-left: 4px solid #6a61e0;
         }
 
         .step-number {
@@ -370,7 +358,7 @@
 <body>
     <div class="container">
         <div class="header">
-            <h1>🚀 MSSandbox Dashboard</h1>
+            <h1>MSSandbox Dashboard</h1>
             <p>Automated data generation and processing system</p>
         </div>
 
@@ -387,23 +375,23 @@
 
         <div class="main-content">
             <div class="automation-controls">
-                <h3>🤖 Automation Controls</h3>
+                <h3>Automation Controls</h3>
                 <div class="automation-buttons">
-                    <button class="btn btn-start" onclick="startAutomation()" id="start-btn">▶️ START</button>
-                    <button class="btn btn-stop" onclick="stopAutomation()" id="stop-btn">⏹️ STOP</button>
-                    <button class="btn btn-view" onclick="viewAllData()">📊 VIEW DATA</button>
+                    <button class="btn btn-start" onclick="startAutomation()" id="start-btn">Start</button>
+                    <button class="btn btn-stop" onclick="stopAutomation()" id="stop-btn">Stop</button>
+                    <button class="btn btn-view" onclick="viewAllData()">View Data</button>
                 </div>
                 <div class="automation-status" id="automation-status">Checking automation status...</div>
             </div>
 
             <div class="flow-diagram">
                 <div class="service-box">
-                    <h3>📡 Producer</h3>
+                    <h3>Producer</h3>
                     <p>Automatically generates and sends sensor data</p>
                 </div>
                 <div class="arrow">→</div>
                 <div class="service-box">
-                    <h3>⚙️ Consumer</h3>
+                    <h3>Consumer</h3>
                     <p>Processes and stores data with analysis</p>
                 </div>
             </div>
@@ -461,7 +449,7 @@
             </div>
 
             <div class="data-flow">
-                <h3>📊 Automated Data Flow</h3>
+                <h3>Automated Data Flow</h3>
                 <div class="flow-step">
                     <div class="step-number">1</div>
                     <div>
@@ -489,12 +477,12 @@
             </div>
 
             <div class="data-display hidden" id="data-display">
-                <h3>📊 Processed Data History</h3>
+                <h3>Processed Data History</h3>
                 <div id="data-table-container"></div>
             </div>
 
             <div class="results" id="results" style="display: none;">
-                <h3>📋 Results</h3>
+                <h3>Results</h3>
                 <div class="json-display" id="json-result"></div>
             </div>
         </div>
@@ -543,10 +531,10 @@
             
             if (healthy) {
                 statusElement.className = 'service-status healthy';
-                healthElement.textContent = '🟢 Healthy';
+                healthElement.textContent = 'Healthy';
             } else {
                 statusElement.className = 'service-status unhealthy';
-                healthElement.textContent = '🔴 Unhealthy';
+                healthElement.textContent = 'Unhealthy';
             }
         }
 
@@ -556,12 +544,12 @@
             const stopBtn = document.getElementById('stop-btn');
             
             if (automationRunning) {
-                statusElement.textContent = '🟢 Automation is RUNNING - Generating data every 5 seconds';
+                statusElement.textContent = 'Automation is RUNNING - Generating data every 5 seconds';
                 statusElement.className = 'automation-status running';
                 startBtn.disabled = true;
                 stopBtn.disabled = false;
             } else {
-                statusElement.textContent = '🔴 Automation is STOPPED';
+                statusElement.textContent = 'Automation is STOPPED';
                 statusElement.className = 'automation-status stopped';
                 startBtn.disabled = false;
                 stopBtn.disabled = true;

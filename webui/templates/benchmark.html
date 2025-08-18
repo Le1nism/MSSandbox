@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<title>MSSandbox - Benchmark</title>
+	<style>
+		* { margin: 0; padding: 0; box-sizing: border-box; }
+		body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #0f0e17; color: #e6e6f0; min-height: 100vh; padding: 20px; }
+		.container { max-width: 1000px; margin: 0 auto; background: #12121a; border-radius: 12px; box-shadow: 0 10px 24px rgba(0,0,0,0.4); overflow: hidden; }
+		.header { background: #17172a; color: #e6e6f0; padding: 30px; text-align: center; }
+		.header h1 { font-size: 2.2em; margin-bottom: 8px; }
+		.header p { opacity: 0.9; }
+		.navbar { display: flex; gap: 10px; justify-content: center; padding: 12px; background: #161622; border-bottom: 1px solid #252538; }
+		.navbar a { color: #c8c8e0; text-decoration: none; padding: 8px 14px; border-radius: 8px; border: 1px solid transparent; }
+		.navbar a.active { background: #6a61e0; border-color: #6a61e0; color: #fff; }
+		.navbar a:hover { background: #1a1a2b; border-color: #2a2a3a; }
+
+		.content { padding: 24px; }
+		.card { background: #141424; border: 1px solid #23233a; border-radius: 12px; padding: 20px; margin-bottom: 20px; }
+		.card h3 { color: #d2d2e6; margin-bottom: 12px; }
+		.row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+		.row .field label { display: block; margin-bottom: 6px; color: #c8c8e0; font-weight: 600; }
+		.row .field input { width: 100%; padding: 10px; border: 1px solid #2a2a3a; border-radius: 8px; background: #0f0e17; color: #e6e6f0; }
+		.actions { display: flex; gap: 12px; margin-top: 12px; }
+		.btn { background: #5b51d8; color: #ffffff; border: 1px solid #6a61e0; padding: 10px 18px; border-radius: 10px; cursor: pointer; font-size: 0.95em; transition: background 0.2s ease, transform 0.1s ease; }
+		.btn:hover { transform: translateY(-1px); background: #6a61e0; }
+		.btn:disabled { background: #3a3956; cursor: not-allowed; }
+		.btn-start { background: #2cce89; border-color: #2cce89; }
+		.btn-stop { background: #e0526f; border-color: #e0526f; }
+		.btn-view { background: #6a61e0; border-color: #6a61e0; }
+		.status { margin-top: 10px; font-weight: 600; color: #b4b0ff; }
+		.json-display { background: #151525; border: 1px solid #23233a; border-radius: 6px; padding: 14px; font-family: 'Courier New', monospace; white-space: pre-wrap; margin-top: 12px; }
+	</style>
+</head>
+<body>
+	<div class="container">
+		<div class="header">
+			<h1>MSSandbox Benchmark</h1>
+			<p>Push the system at full speed and measure throughput</p>
+		</div>
+		<div class="navbar">
+			<a href="/automation">Automation</a>
+			<a href="/benchmark" class="active">Benchmark</a>
+		</div>
+		<div class="content">
+			<div class="card">
+				<h3>Parameters</h3>
+				<div class="row">
+					<div class="field">
+						<label for="bm-duration">Duration (s)</label>
+						<input id="bm-duration" type="number" value="15" min="1" />
+					</div>
+					<div class="field">
+						<label for="bm-workers">Workers</label>
+						<input id="bm-workers" type="number" value="4" min="1" />
+					</div>
+				</div>
+				<div class="row" style="margin-top: 10px;">
+					<div class="field">
+						<label for="bm-bytes">Payload size (bytes)</label>
+						<input id="bm-bytes" type="number" value="512" min="0" step="1" />
+					</div>
+				</div>
+				<div class="actions">
+					<button class="btn btn-start" id="bm-start" onclick="startBenchmark()">Start Benchmark</button>
+					<button class="btn btn-stop" id="bm-stop" onclick="stopBenchmark()" disabled>Stop</button>
+					<button class="btn btn-view" onclick="loadBenchmarkLogs()">View Last Logs</button>
+				</div>
+				<div id="benchmark-status" class="status">Benchmark idle</div>
+				<div class="json-display" id="benchmark-result" style="display:none;"></div>
+			</div>
+		</div>
+	</div>
+
+	<script>
+		let benchmarkPolling = null;
+
+		async function startBenchmark() {
+			const duration = parseInt(document.getElementById('bm-duration').value || '15', 10);
+			const workers = parseInt(document.getElementById('bm-workers').value || '4', 10);
+			const bytes = parseInt(document.getElementById('bm-bytes').value || '0', 10);
+			const startBtn = document.getElementById('bm-start');
+			const stopBtn = document.getElementById('bm-stop');
+			const statusDiv = document.getElementById('benchmark-status');
+			const resultDiv = document.getElementById('benchmark-result');
+			resultDiv.style.display = 'none';
+			statusDiv.textContent = 'Starting benchmark...';
+			startBtn.disabled = true;
+			stopBtn.disabled = false;
+			try {
+				const resp = await fetch('/api/benchmark/start', {
+					method: 'POST', headers: { 'Content-Type': 'application/json' },
+					body: JSON.stringify({ duration_seconds: duration, payload_bytes: bytes, workers })
+				});
+				const data = await resp.json();
+				if (!resp.ok || data.error) throw new Error(data.error || 'Failed to start benchmark');
+				statusDiv.textContent = 'Benchmark running...';
+				if (benchmarkPolling) clearInterval(benchmarkPolling);
+				benchmarkPolling = setInterval(pollBenchmarkStatus, 1000);
+			} catch (e) {
+				statusDiv.textContent = 'Error starting benchmark';
+				startBtn.disabled = false; stopBtn.disabled = true;
+			}
+		}
+
+		async function pollBenchmarkStatus() {
+			const statusDiv = document.getElementById('benchmark-status');
+			const resultDiv = document.getElementById('benchmark-result');
+			try {
+				const resp = await fetch('/api/benchmark/status');
+				const data = await resp.json();
+				if (data.error) throw new Error(data.error);
+				const prod = data.producer || {};
+				const running = !!(prod.running);
+				const rps = prod.throughput && prod.throughput.requests_per_second ? prod.throughput.requests_per_second.toFixed(1) : 'n/a';
+				const bps = prod.throughput && prod.throughput.bytes_per_second ? prod.throughput.bytes_per_second.toFixed(0) : 'n/a';
+				statusDiv.textContent = `Running: ${running} | Producer succ=${prod.stats ? prod.stats.succeeded : 'n/a'} fail=${prod.stats ? prod.stats.failed : 'n/a'} | RPS=${rps} | B/s=${bps}`;
+				if (!running) {
+					clearInterval(benchmarkPolling); benchmarkPolling = null;
+					try {
+						const finalize = await fetch('/api/benchmark/stop', { method: 'POST' });
+						const finalData = await finalize.json();
+						resultDiv.style.display = 'block'; resultDiv.textContent = JSON.stringify(finalData, null, 2);
+					} catch (_) {
+						resultDiv.style.display = 'block'; resultDiv.textContent = JSON.stringify(data, null, 2);
+					}
+					document.getElementById('bm-start').disabled = false; document.getElementById('bm-stop').disabled = true;
+				}
+			} catch (_) { statusDiv.textContent = 'Error polling benchmark status'; }
+		}
+
+		async function stopBenchmark() {
+			const startBtn = document.getElementById('bm-start');
+			const stopBtn = document.getElementById('bm-stop');
+			const statusDiv = document.getElementById('benchmark-status');
+			const resultDiv = document.getElementById('benchmark-result');
+			try {
+				const resp = await fetch('/api/benchmark/stop', { method: 'POST' });
+				const data = await resp.json();
+				statusDiv.textContent = 'Benchmark stopped';
+				resultDiv.style.display = 'block'; resultDiv.textContent = JSON.stringify(data, null, 2);
+			} catch (_) { statusDiv.textContent = 'Stop failed'; }
+			finally { if (benchmarkPolling) clearInterval(benchmarkPolling); benchmarkPolling = null; startBtn.disabled = false; stopBtn.disabled = true; }
+		}
+
+		async function loadBenchmarkLogs() {
+			const resultDiv = document.getElementById('benchmark-result');
+			try { const resp = await fetch('/api/benchmark/logs?n=10'); const data = await resp.json(); resultDiv.style.display = 'block'; resultDiv.textContent = JSON.stringify(data, null, 2); }
+			catch (e) { resultDiv.style.display = 'block'; resultDiv.textContent = 'Failed to load logs'; }
+		}
+	</script>
+</body>
+</html>
+
+

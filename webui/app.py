@@ -2,7 +2,7 @@
 import os
 import json
 import requests
-from flask import Flask, render_template, jsonify, request
+from flask import Flask, render_template, jsonify, request, redirect, url_for
 from datetime import datetime
 from pathlib import Path
 
@@ -41,8 +41,16 @@ def check_service_health(service_name, url):
 
 @app.route('/')
 def home():
-    """Main dashboard page"""
-    return render_template('index.html')
+    """Redirect to the Automation page by default"""
+    return redirect(url_for('automation_page'))
+
+@app.route('/automation')
+def automation_page():
+    return render_template('automation.html')
+
+@app.route('/benchmark')
+def benchmark_page():
+    return render_template('benchmark.html')
 
 @app.route('/api/status')
 def api_status():
