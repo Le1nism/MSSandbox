@@ -70,6 +70,20 @@ def api_status():
         'timestamp': datetime.now().isoformat()
     })
 
+@app.route('/api/metrics')
+def api_metrics():
+    """Fetch metrics from producer and consumer services"""
+    try:
+        prod = requests.get(f"{PRODUCER_URL}/metrics", timeout=3)
+        cons = requests.get(f"{CONSUMER_URL}/metrics", timeout=3)
+        return jsonify({
+            'producer': prod.json() if prod.ok else {'error': 'unavailable'},
+            'consumer': cons.json() if cons.ok else {'error': 'unavailable'},
+            'timestamp': datetime.now().isoformat()
+        })
+    except requests.exceptions.RequestException as e:
+        return jsonify({'error': f'Error fetching metrics: {str(e)}'}), 500
+
 @app.route('/api/generate-data')
 def api_generate_data():
     """Generate data from producer"""

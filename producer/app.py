@@ -7,6 +7,7 @@ import requests
 import threading
 from flask import Flask, jsonify, request
 from datetime import datetime
+import psutil
 
 app = Flask(__name__)
 
@@ -290,6 +291,32 @@ def status():
         'last_data_sensor_id': last_generated_data['sensor_id'] if last_generated_data else None,
         'benchmark_running': benchmark_running
     })
+
+# System metrics endpoint
+@app.route('/metrics')
+def metrics():
+    try:
+        proc = psutil.Process()
+        cpu_percent = psutil.cpu_percent(interval=None)
+        mem = psutil.virtual_memory()
+        proc_mem = proc.memory_info()
+        return jsonify({
+            'cpu_percent': cpu_percent,
+            'memory': {
+                'total': mem.total,
+                'available': mem.available,
+                'used': mem.used,
+                'percent': mem.percent
+            },
+            'process': {
+                'rss_bytes': proc_mem.rss,
+                'vms_bytes': proc_mem.vms,
+                'num_threads': proc.num_threads()
+            },
+            'timestamp': datetime.now().isoformat()
+        })
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
 
 # Benchmark endpoints
 @app.route('/benchmark/start', methods=['POST'])

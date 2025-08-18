@@ -6,3 +6,6 @@ requests==2.31.0
 
 # Environment variables
 python-dotenv==1.0.0
+
+# System metrics (not strictly needed in UI, but keep consistent if we want local metrics later)
+psutil==5.9.8

@@ -86,6 +86,15 @@
 			</div>
 
 			<div class="card">
+				<h3>Live System Metrics</h3>
+				<div class="row">
+					<div class="field" style="grid-column: 1 / -1;">
+						<div id="metrics-grid" class="cards"></div>
+					</div>
+				</div>
+			</div>
+
+			<div class="card">
 				<h3>Previous Runs</h3>
 				<div class="actions">
 					<button class="btn btn-view" onclick="loadBenchmarkLogs()">Refresh</button>
@@ -97,6 +106,7 @@
 
 	<script>
 		let benchmarkPolling = null;
+		let metricsPolling = null;
 
 		async function startBenchmark() {
 			const duration = parseInt(document.getElementById('bm-duration').value || '15', 10);
@@ -120,6 +130,8 @@
 				statusDiv.textContent = 'Benchmark running...';
 				if (benchmarkPolling) clearInterval(benchmarkPolling);
 				benchmarkPolling = setInterval(pollBenchmarkStatus, 1000);
+				if (metricsPolling) clearInterval(metricsPolling);
+				metricsPolling = setInterval(pollMetrics, 1500);
 			} catch (e) {
 				statusDiv.textContent = 'Error starting benchmark';
 				startBtn.disabled = false; stopBtn.disabled = true;
@@ -148,6 +160,7 @@
 						resultDiv.style.display = 'block'; resultDiv.textContent = JSON.stringify(data, null, 2);
 					}
 					document.getElementById('bm-start').disabled = false; document.getElementById('bm-stop').disabled = true;
+					if (metricsPolling) { clearInterval(metricsPolling); metricsPolling = null; }
 				}
 			} catch (_) { statusDiv.textContent = 'Error polling benchmark status'; }
 		}
@@ -163,7 +176,7 @@
 				statusDiv.textContent = 'Benchmark stopped';
 				resultDiv.style.display = 'block'; resultDiv.textContent = JSON.stringify(data, null, 2);
 			} catch (_) { statusDiv.textContent = 'Stop failed'; }
-			finally { if (benchmarkPolling) clearInterval(benchmarkPolling); benchmarkPolling = null; startBtn.disabled = false; stopBtn.disabled = true; }
+			finally { if (benchmarkPolling) clearInterval(benchmarkPolling); benchmarkPolling = null; if (metricsPolling) { clearInterval(metricsPolling); metricsPolling = null; } startBtn.disabled = false; stopBtn.disabled = true; }
 		}
 
 		async function loadBenchmarkLogs() {
@@ -179,6 +192,46 @@
 			} catch (e) {
 				cards.innerHTML = '<div class="card-run"><div class="sub">Failed to load logs</div></div>';
 			}
+		}
+
+		async function pollMetrics() {
+			try {
+				const resp = await fetch('/api/metrics');
+				const data = await resp.json();
+				const g = document.getElementById('metrics-grid');
+				g.innerHTML = renderMetricsCards(data);
+			} catch (_) { /* ignore */ }
+		}
+
+		function renderMetricsCards(metrics) {
+			if (!metrics) return '';
+			const prod = metrics.producer || {};
+			const cons = metrics.consumer || {};
+			return [
+				renderOne('Producer', prod),
+				renderOne('Consumer', cons)
+			].join('');
+		}
+
+		function renderOne(name, m) {
+			if (!m || m.error) {
+				return `<div class="card-run"><div class="title">${name}</div><div class="sub">unavailable</div></div>`;
+			}
+			const cpu = isFiniteNum(m.cpu_percent) ? m.cpu_percent.toFixed(1) + '%' : 'n/a';
+			const mem = m.memory || {}; const used = formatBytes(mem.used); const total = formatBytes(mem.total); const memPct = isFiniteNum(mem.percent) ? mem.percent.toFixed(1) + '%' : 'n/a';
+			const proc = m.process || {}; const rss = formatBytes(proc.rss_bytes || 0); const thr = proc.num_threads || 'n/a';
+			return `
+				<div class="card-run">
+					<div class="header"><div class="title">${name}</div><span class="badge badge-ok">live</span></div>
+					<div class="metrics-row">
+						<div class="metric"><div class="label">CPU</div><div class="value">${cpu}</div></div>
+						<div class="metric"><div class="label">Threads</div><div class="value">${thr}</div></div>
+						<div class="metric"><div class="label">Memory Used</div><div class="value">${used} / ${total}</div></div>
+						<div class="metric"><div class="label">Memory %</div><div class="value">${memPct}</div></div>
+						<div class="metric"><div class="label">Process RSS</div><div class="value">${rss}</div></div>
+					</div>
+				</div>
+			`;
 		}
 
 		function renderLogCards(logs) {

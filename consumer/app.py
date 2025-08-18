@@ -4,6 +4,7 @@ import json
 import requests
 from flask import Flask, jsonify, request
 from datetime import datetime
+import psutil
 
 app = Flask(__name__)
 
@@ -254,6 +255,32 @@ def status():
         'history_entries': len(processed_data_history),
         'max_history_size': max_history_size
     })
+
+# System metrics endpoint
+@app.route('/metrics')
+def metrics():
+    try:
+        proc = psutil.Process()
+        cpu_percent = psutil.cpu_percent(interval=None)
+        mem = psutil.virtual_memory()
+        proc_mem = proc.memory_info()
+        return jsonify({
+            'cpu_percent': cpu_percent,
+            'memory': {
+                'total': mem.total,
+                'available': mem.available,
+                'used': mem.used,
+                'percent': mem.percent
+            },
+            'process': {
+                'rss_bytes': proc_mem.rss,
+                'vms_bytes': proc_mem.vms,
+                'num_threads': proc.num_threads()
+            },
+            'timestamp': datetime.now().isoformat()
+        })
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
 
 if __name__ == '__main__':
     print(f"CONSUMER SERVICE STARTED on port {SERVICE_PORT}")
